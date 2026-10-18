@@ -471,23 +471,110 @@ is prepared); model-server endpoints and paths are scrubbed.
 \appendix
 
 \section{Protocol Pseudocode}
-\todo{Decision-order pseudocode with the frozen thresholds.}
+\label{app:pseudocode}
+
+The attribution decision order is frozen in \texttt{docs/PROTOCOL.md} and
+implemented once in \texttt{evaluation/attribution.py}. Lexical scores are
+computed for reporting only and never enter this procedure.
+
+\begin{verbatim}
+def attribute(answer, gold_evidence, benchmark_answer, stage_artifacts):
+    if semantic_verdict(answer, gold_evidence) == CORRECT:      # (1)
+        return NO_FAILURE
+    if semantic_verdict(answer, gold_evidence) == UNCERTAIN:    # (2)
+        return EVAL_SEMANTIC_UNCERTAIN
+    if not evidence_sufficient(gold_evidence, benchmark_answer): # (3) E0 gate
+        return E0_EVIDENCE_INSUFFICIENT
+    for stage in [FORMATION, STORAGE, EVOLUTION,               # (4) F1-F5
+                  RETRIEVAL, RERANKING]:
+        if not covers(stage_artifacts[stage], gold_evidence):
+            return FAILURE_LABEL[stage]
+    return F6_REASONING_CANDIDATE                                # (5)
+\end{verbatim}
+
+Frozen thresholds: content-preservation check --- shared content
+vocabulary $\geq 50\%$ of the smaller side and $\geq \min(2, |gold|)$
+shared tokens; semantic tier --- directional containment $\geq 0.8$ with
+the same absolute floor; deterministic judge support R1 --- shared span
+covers $\geq 0.8$ of the candidate (verbatim-quote cases only);
+deterministic judge support R2 --- pure date/relative expressions that
+resolve to the same date as timestamped evidence. \verb|provenance_only|
+matches are reported as diagnostics, never as stage coverage.
 
 \section{Per-Question Attribution Tables}
-\todo{Full per-question traces (appendix artifact).}
+\label{app:traces}
+
+Every study writes one JSON object per question to
+\verb|comparison.jsonl| with: the question and benchmark answer; the gold
+evidence spans (with ids and timestamps); per-condition answers; the
+semantic verdicts and judge metadata; the per-stage artifact coverage used
+by the attribution decision; the assigned failure label; and the code
+commit of the run. The per-question tables of all studies are released as
+an artifact alongside the paper; Table~\ref{tab:2b} and
+Table~\ref{tab:2b-type} aggregate them.
 
 \section{Judge Prompts and Normalization}
-\todo{Primary and cross-model judge prompts; normalization rules R1/R2.}
+\label{app:judge}
+
+The semantic judge is prompted to decide whether the model answer is
+correct \emph{given the gold evidence}, and to answer
+\texttt{yes}/\texttt{no}/\texttt{uncertain} with a one-line rationale;
+the judge never sees the benchmark reference answer (the E0 gate owns that
+comparison) and never sees lexical scores. Two deterministic channels
+repair judge output before it is accepted, both deliberately narrow:
+\textbf{R1 lexical} accepts a \texttt{no} verdict only when the candidate
+is essentially a verbatim quote of the evidence (shared span covers
+$\geq 0.8$ of the candidate); \textbf{R2 temporal} accepts pure
+date/relative expressions that resolve to the same date as timestamped
+evidence. Anything wider passed wrong answers during calibration
+(``went to the park'' style candidates), which is why the thresholds are
+frozen and regression-tested. The cross-model judge (Study 2E) uses the
+same prompt with \texttt{gemma3:12b}; agreement is reported as Cohen's
+$\kappa$ on the shared subsample.
 
 \section{Stratification Recipes}
-\todo{Two-stage stratification, largest-remainder allocation, seeds.}
+\label{app:stratification}
+
+Study subsets are built by \texttt{experiments/build\_study\_set.py}.
+Primary stratum: conversation (or session group) so that no single
+conversation dominates and within-conversation correlation is spread
+across the sample; secondary stratum: question type. Allocation is
+proportional by largest remainder, with a minimum of one question per
+type present in a conversation. Seed 20261018 for all studies. Committed
+subsets store question-level records only; conversations are joined at
+load time from the local full dataset, and raw benchmark text is not
+redistributed.
 
 \section{Statistical Procedures}
-\todo{Exact McNemar (binomial on discordant pairs), paired bootstrap
-percentile CI, Cohen's kappa definition and estimator details.}
+\label{app:stats}
+
+Condition comparisons are paired by question. \textbf{Exact McNemar}: with
+$b$ questions correct only under condition A and $c$ correct only under
+condition B, the two-sided exact $p$-value is the binomial tail
+$2\min(P(X\leq \min(b,c)), P(X\geq \max(b,c)))$ with $X\sim
+\mathrm{Binomial}(b{+}c, 0.5)$ under the null. \textbf{Paired bootstrap
+CI}: 10{,}000 resamples of question indices; percentile interval of the
+per-question accuracy difference. \textbf{Cohen's $\kappa$}
+(Study 2E): $\kappa = (p_o - p_e)/(1 - p_e)$ over the verdict categories
+\texttt{correct}/\texttt{incorrect}/\texttt{uncertain}, computed on the
+seeded subsample of Study 2B that both judges re-score. Because questions
+within one conversation are correlated, we report per-type breakdowns
+alongside pooled numbers and treat pooled $p$-values as optimistic
+\cite{dietterich-nested}.
 
 \section{Environment}
-\todo{Models and digests, embedding backend, hardware, timings, code
-commits per study.}
+\label{app:env}
+
+Answer models: \texttt{qwen2.5:7b} (digest \texttt{845dbda0ea48}, 4.7\,GB)
+and \texttt{gemma3:12b} (digest \texttt{b92b218582c5}, 8.2\,GB);
+embedding backend \texttt{bge-m3:latest} (digest \texttt{790764642607},
+1024-dim), all served locally via Ollama with temperature 0. Hardware:
+single laptop GPU (8\,GB VRAM); no distributed inference. Per-study
+timings and code commits are recorded in each \verb|summary.json|
+(\verb|models.code\_commit|); Study 2A/2B ran under commit
+\texttt{a0fbf66} (post-C8 fix), the strict-mode reruns are the reported
+numbers. Every run is followed by \texttt{audit\_embedding\_dims.py}
+to verify the embedding backend served the full run (no silent hash
+degradation).
 
 \end{document}
