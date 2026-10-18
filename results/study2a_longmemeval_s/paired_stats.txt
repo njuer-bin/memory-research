@@ -1,0 +1,26 @@
+Loaded 10 successful rows from results/study2a_longmemeval_s/comparison.jsonl
+
+=== CONDITION ACCURACY (semantic verdict) ===
+real_memory      7/10 = 0.700 (uncertain=0)
+oracle_memory    10/10 = 1.000 (uncertain=0)
+oracle_context   10/10 = 1.000 (uncertain=0)
+
+=== PAIRED TESTS (exact McNemar + paired bootstrap) ===
+real_memory vs oracle_memory: discordant b=3 (only real wrong) c=0 (only oracle wrong), exact p=0.2500
+  delta_acc = +0.300, paired bootstrap 95% CI = [+0.000, +0.600]
+real_memory vs oracle_context: discordant b=3 (only real wrong) c=0 (only oracle wrong), exact p=0.2500
+  delta_acc = +0.300, paired bootstrap 95% CI = [+0.000, +0.600]
+
+=== FAILURE DISTRIBUTION (real_memory) ===
+F1_FORMATION                   2 (66.7%)
+F3_EVOLUTION                   1 (33.3%)
+(no failure / correct)         7
+
+=== MEAN STAGE RECALL (gold evidence found) ===
+real_memory      formation=0.200 storage=1.000 evolution=0.100 retrieval=1.000 rerank=1.000 context=0.650
+oracle_memory    formation=1.000 storage=1.000 evolution=1.000 retrieval=1.000 rerank=1.000 context=1.000
+oracle_context   formation=0.000 storage=0.000 evolution=0.000 retrieval=0.000 rerank=0.000 context=1.000
+
+=== BREAKDOWN BY QUESTION TYPE ===
+type                           n   real oracleM oracleC  failures
+single-session-user           10  0.700   1.000   1.000  F1_FORMATIONx2, F3_EVOLUTIONx1

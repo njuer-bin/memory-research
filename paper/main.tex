@@ -255,10 +255,16 @@ control failures, not evidence of reasoning strength.
 \label{sec:results}
 
 \paragraph{Study 2A (protocol replication, n=10, full haystack).}
-Three-condition independence holds: \todo{real 7/10 vs oracle 10/10 vs
-oracle context 10/10 (pre-fix run; to be replaced by the strict-mode
-re-run)}. Calibration-period false negatives (e47becba, 58bf7951) are
-explained by the formation boundary.
+Three-condition independence holds in the strict-mode rerun: Real Memory
+7/10 semantic accuracy, Oracle Memory 10/10, Oracle Context 10/10. The
+real-vs-oracle gap is directionally large ($+0.300$) but not significant at
+$n{=}10$ (exact McNemar $b{=}3$, $c{=}0$, $p{=}0.25$; bootstrap CI
+$[+0.000, +0.600]$)---this study exists to validate the protocol, not to
+estimate effects. First losses: \fone{}$\times$8, \fthree{}$\times$1,
+context$\times$1; stage recall formation 0.200, storage 1.000, evolution
+0.100, retrieval 1.000, rerank 1.000, context 0.650. The E0 gate finds all
+10 items evidence-sufficient. Calibration-period false negatives (e47becba,
+58bf7951) are explained by the formation boundary.
 
 \paragraph{Study 2B (primary, n=50).}
 Table~\ref{tab:2b} reports the strict-mode rerun (post-C8 fix; embedding

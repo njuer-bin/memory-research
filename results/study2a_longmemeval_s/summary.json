@@ -60,10 +60,10 @@
       "count": 10,
       "lexical": {
         "scored": 10,
-        "correct": 6,
-        "accuracy": 0.6,
+        "correct": 7,
+        "accuracy": 0.7,
         "exact_match": 0.2,
-        "token_f1": 0.5123202614379085
+        "token_f1": 0.5229866332497911
       },
       "semantic": {
         "scored": 10,
@@ -105,14 +105,14 @@
       "model_errors": 0
     },
     "first_answer_failure_distribution": {
-      "F1_FORMATION": 2,
-      "F3_EVOLUTION": 1
+      "F3_EVOLUTION": 1,
+      "F1_FORMATION": 2
     }
   },
   "models": {
     "answer_model": "qwen2.5:7b",
     "semantic_judge_model": "qwen2.5:7b",
-    "code_commit": "a4dd98f4cbfe40427616b518c26ec4f50af2a5cd"
+    "code_commit": "fec8506bd999dc5f97c03234c7dc6d435178e2ad"
   },
   "note": "Evidence lifecycle and answer scoring are reported separately. Before F1-F6 attribution, Gold Evidence is checked for question-answer sufficiency using the benchmark reference answer rather than the Real Memory prediction. Insufficient evidence is E0; uncertain or judge-error cases are EVAL. F6_REASONING_CANDIDATE is assigned only when the gate is sufficient, all gold evidence reaches final context, and the SEMANTIC evaluator (not the lexical scorer) marks the model answer incorrect. Oracle Context remains a reasoning control and its own wrong answer is RC_REASONING_CONTROL_FAILURE."
 }
