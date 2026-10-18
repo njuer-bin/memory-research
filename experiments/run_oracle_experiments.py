@@ -22,6 +22,12 @@ from memory_engine.engine import MemoryEngine
 from memory_engine.models import AddMessage, AddRequest, SearchRequest, fingerprint, new_id
 from tracing.dataset_trace import record_to_trace
 from tracing.engine_trace import artifacts_from_store, retrieval_artifacts, stage_match
+from tracing.real_stages import (
+    active_rows,
+    fill_real_stages,
+    stage_artifact_sets,
+    stage_dict,
+)
 from evaluation.attribution import attribute_failure, control_failure_label
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,22 +76,6 @@ def _gold_artifacts(record: dict[str, Any]) -> list[dict[str, Any]]:
         for e in record.get("gold_evidence", [])
         if e.get("evidence_id") and e.get("text")
     ]
-
-
-def _stage(gold: list[dict[str, Any]], artifacts: list[dict[str, Any]], mode: str) -> dict[str, Any]:
-    match = stage_match(gold, artifacts)
-    return {
-        "found": match["found"],
-        "missing": match["missing"],
-        "details": {
-            "mode": mode,
-            "observed_count": match["observed_count"],
-            "match_types": match.get("match_types", {}),
-            "match_scores": match.get("match_scores", {}),
-            "provenance_only": match.get("provenance_only", []),
-            "matches": match["matches"],
-        },
-    }
 
 
 def _real_engine(record: dict[str, Any], idx: int) -> tuple[MemoryEngine, str]:
@@ -238,43 +228,12 @@ def _formation_diagnostics(gold: list[dict[str, Any]], stored: dict[str, list[di
     return diagnostics
 
 
-def _active(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Rows that survive governance (facts can be superseded; nothing else can)."""
-    return [r for r in rows if str(r.get("status") or "active") == "active"]
-
-
 def _real_trace_stages(trace: Any, gold: list[dict[str, Any]], engine: MemoryEngine, user_id: str, real: list[dict[str, Any]], search_trace: dict[str, Any]) -> None:
-    stored = artifacts_from_store(engine, user_id)
-    # Formation = everything the extractor produced (including facts that
-    # governance later superseded). Evolution = the current, post-governance
-    # belief state. The two used to be the same list, which made F3
-    # structurally untestable (audit finding C4): a fact that was formed but
-    # then superseded is exactly an evolution-stage loss and must surface as
-    # F3, not as a silent pass.
-    formation = stored["facts"] + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
-    storage = stored["raw"] + formation
-    evolution = _active(stored["facts"]) + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
-    superseded = len(stored["facts"]) - len(_active(stored["facts"]))
-    trace.formation = type(trace.formation)(**_stage(gold, formation, "real_memory"))
-    trace.formation.details["diagnostics"] = _formation_diagnostics(gold, stored)
-    trace.formation.details["semantic_memory_counts"] = {
-        "total": len(formation),
-        "by_type": {
-            "fact": len(stored["facts"]), "relation": len(stored["relations"]),
-            "event": len(stored["events"]), "rule": len(stored["rules"]),
-            "profile": len(stored["profiles"]),
-        },
-    }
-    trace.storage = type(trace.storage)(**_stage(gold, storage, "real_memory"))
-    trace.evolution = type(trace.evolution)(**_stage(gold, evolution, "real_memory"))
-    trace.evolution.details["superseded_facts"] = superseded
-    trace.evolution.details["measured"] = True
-    retrieval = search_trace.get("retrieval_candidates") or real
-    rerank = search_trace.get("reranked") or real
-    context = search_trace.get("context") or real
-    trace.retrieval = type(trace.retrieval)(**_stage(gold, retrieval, "real_memory_retrieval_candidates"))
-    trace.rerank = type(trace.rerank)(**_stage(gold, rerank, "real_memory_reranked"))
-    trace.context = type(trace.context)(**_stage(gold, context, "real_memory_context"))
+    """Fill the Real Memory lifecycle stages via the shared measurement module."""
+    fill_real_stages(
+        trace, gold, engine, user_id, real, search_trace,
+        formation_diagnostics=_formation_diagnostics,
+    )
 
 
 def _oracle_memory_trace(
@@ -292,20 +251,21 @@ def _oracle_memory_trace(
     whether the pipeline can surface evidence that is perfectly in memory.
     """
     stored = artifacts_from_store(engine, user_id)
-    formation = stored["facts"] + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
-    storage = stored["raw"] + formation
-    evolution = _active(stored["facts"]) + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
+    sets = stage_artifact_sets(stored)
     stages = {
-        "formation": _stage(gold, formation, "oracle_memory_formation"),
-        "storage": _stage(gold, storage, "oracle_memory_storage"),
-        "evolution": _stage(gold, evolution, "oracle_memory_evolution"),
+        "formation": stage_dict(gold, sets["formation"], "oracle_memory_formation"),
+        "storage": stage_dict(gold, sets["storage"], "oracle_memory_storage"),
+        "evolution": stage_dict(gold, sets["evolution"], "oracle_memory_evolution"),
     }
+    stages["evolution"]["details"]["superseded_facts"] = (
+        len(stored["facts"]) - len(active_rows(stored["facts"]))
+    )
     retrieval = search_trace.get("retrieval_candidates") or real
     rerank = search_trace.get("reranked") or real
     context = search_trace.get("context") or real
-    stages["retrieval"] = _stage(gold, retrieval, "oracle_memory_retrieval_candidates")
-    stages["rerank"] = _stage(gold, rerank, "oracle_memory_reranked")
-    stages["context"] = _stage(gold, context, "oracle_memory_context")
+    stages["retrieval"] = stage_dict(gold, retrieval, "oracle_memory_retrieval_candidates")
+    stages["rerank"] = stage_dict(gold, rerank, "oracle_memory_reranked")
+    stages["context"] = stage_dict(gold, context, "oracle_memory_context")
     return stages
 
 
@@ -317,7 +277,7 @@ def _oracle_context_trace(gold: list[dict[str, Any]], oracle: list[dict[str, Any
     lifecycle failure.
     """
     result = {
-        stage: {**_stage(gold, [], "oracle_context_not_measured"), "measured": False}
+        stage: {**stage_dict(gold, [], "oracle_context_not_measured"), "measured": False}
         for stage in ("formation", "storage", "evolution", "retrieval", "rerank")
     }
     result["context"] = _stage(gold, oracle, "oracle_context")

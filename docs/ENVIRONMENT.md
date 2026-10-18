@@ -8,16 +8,44 @@
 - **Pin the model digest**, not just the tag, for any published run:
   record `ollama show qwen2.5:7b --modelfile` digest in the run summary.
 
+## Embeddings (Phase 2 decision)
+
+- Embedding model: **`bge-m3:latest`** via Ollama `/api/embeddings`
+  (override with `OLLAMA_EMBEDDING_MODEL`).
+- Phase 1 smoke tests accidentally ran with the hash-embedding fallback
+  (default `qwen3-embedding:4b` was not installed). Those runs are pipeline
+  validation only and are **not** paper results. All Phase 2 runs set
+  `OLLAMA_EMBEDDING_MODEL=bge-m3:latest`.
+- The memory analyzer (fact/relation/event extraction) is deterministic and
+  rule-based; it makes no LLM calls. Only answer generation, semantic judging
+  and embeddings hit the model server.
+
 ## Hardware
 
-Experiments were developed on RTX 5060 Laptop (8 GB VRAM). Expected runtime
-scales roughly linearly with n; the n=10 LongMemEval sanity run took ~22 min.
+Experiments were developed on RTX 5060 Laptop (8 GB VRAM). Measured warm
+generation speed: qwen2.5:7b ≈ 2 tok/s, gemma3:12b ≈ 0.65 tok/s. Budget
+accordingly: a qwen run of the 500-record LongMemEval oracle set costs
+roughly 3–5 min/record (3 answer generations + 4 judge calls + embeddings).
 
 ## Python
 
 - Python 3.11+ (developed on 3.13)
 - `pip install -r requirements.txt`
 - Run everything from the repository root.
+
+## Phase 2 run matrix (planned)
+
+| Study | Dataset | n | Answer model | Judge model | Purpose |
+|---|---|---|---|---|---|
+| 2A | longmemeval_s_sample10 (full haystack) | 10 | qwen2.5:7b | qwen2.5:7b | protocol replication of the pre-fix n=10 run |
+| 2B | longmemeval_oracle (filtered haystack, 6 question types) | 50 | qwen2.5:7b | qwen2.5:7b | primary n=50 scale-up |
+| 2C | locomo_refined_public | 50 | qwen2.5:7b | qwen2.5:7b | cross-benchmark replication |
+| 2D | longmemeval_oracle | 50 | gemma3:12b | qwen2.5:7b | model robustness (cross-design) |
+| 2E | 2B subsample | 20 | — | gemma3:12b (re-judge) | inter-judge agreement (audit I2) |
+
+Cross-model judging in 2D/2E avoids answer-model self-preference bias in the
+semantic evaluator. Study 2B uses a single judge for internal consistency;
+2E quantifies how much that choice matters.
 
 ## Reproducibility rules
 

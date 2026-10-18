@@ -20,7 +20,8 @@ from evaluation.attribution import earliest_failed_stage
 from memory_engine.engine import MemoryEngine
 from memory_engine.models import AddMessage, AddRequest, SearchRequest
 from tracing.dataset_trace import record_to_trace
-from tracing.engine_trace import artifacts_from_store, retrieval_artifacts, stage_match
+from tracing.engine_trace import retrieval_artifacts
+from tracing.real_stages import fill_real_stages
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,42 +70,14 @@ def _stage_observed(gold: list[dict[str, Any]], artifacts: list[dict[str, Any]])
 def run_record(engine: MemoryEngine, record: dict[str, Any], user_id: str) -> dict[str, Any]:
     trace = record_to_trace(record)
     gold = [x.__dict__ for x in trace.gold_evidence]
-    sessions = _sessions(record)
-
-    formation_artifacts = []
-    for session in sessions:
-        for msg in session["messages"]:
-            role, text, ts = _message_parts(msg)
-            if not text:
-                continue
-            analyzed = engine.analyzer.analyze(user_id, text, ts or 0, source=role)
-            for key in ("facts", "relations", "events", "rules", "profiles"):
-                for item in analyzed.get(key, []):
-                    formation_artifacts.append({
-                        "source_id": session["session_id"],
-                        "content": getattr(item, "content", str(item)),
-                        "memory_type": key,
-                        "id": getattr(item, "id", None),
-                    })
-    m = stage_match(gold, formation_artifacts)
-    trace.formation = type(trace.formation)(found=m["found"], missing=m["missing"],
-                                            details={"matches": m["matches"], "observed_count": m["observed_count"]})
-
-    artifacts = artifacts_from_store(engine, user_id)
-    m = stage_match(gold, artifacts["raw"])
-    trace.storage = type(trace.storage)(found=m["found"], missing=m["missing"],
-                                        details={"matches": m["matches"], "observed_count": m["observed_count"]})
-    evolved = artifacts["facts"] + artifacts["relations"] + artifacts["events"] + artifacts["rules"] + artifacts["profiles"]
-    m = stage_match(gold, evolved)
-    trace.evolution = type(trace.evolution)(found=m["found"], missing=m["missing"],
-                                            details={"matches": m["matches"], "observed_count": m["observed_count"]})
 
     results = engine.search(SearchRequest(query=record["question"], user_id=user_id, top_k=10, multi_hop=True))
-    m = stage_match(gold, retrieval_artifacts(results))
-    trace.retrieval = type(trace.retrieval)(found=m["found"], missing=m["missing"],
-                                             details={"matches": m["matches"], "observed_count": m["observed_count"]})
-    trace.rerank = trace.retrieval
-    trace.context = trace.retrieval
+    real = retrieval_artifacts(results)
+    # Shared lifecycle measurement (same matcher and stage definitions as the
+    # oracle experiment runner): provenance matches require content
+    # preservation, evolution is the post-governance active set. Ingestion
+    # already happened in run(); the store holds the formed memories.
+    fill_real_stages(trace, gold, engine, user_id, real, engine.last_search_trace)
     trace.answer = {"correct": None, "answer": None, "mode": "search-only-diagnostic"}
     # This probe generates no answer, so it reports lifecycle recall only.
     # The answer-level label (F6/E0/EVAL) is owned by the semantic protocol
