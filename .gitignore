@@ -6,7 +6,10 @@ __pycache__/
 venv/
 
 # Experiment runtime artifacts (regenerable, never commit)
-results/
+results/*
+!results/study2a_longmemeval_s/
+# Study 2A (n=10) results are the committed reproducibility anchor
+# (audit finding I5); larger studies are published as release artifacts.
 /data/
 *.db
 *.sqlite

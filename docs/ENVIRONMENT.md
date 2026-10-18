@@ -33,19 +33,34 @@ roughly 3–5 min/record (3 answer generations + 4 judge calls + embeddings).
 - `pip install -r requirements.txt`
 - Run everything from the repository root.
 
-## Phase 2 run matrix (planned)
+## Phase 2 run matrix
 
-| Study | Dataset | n | Answer model | Judge model | Purpose |
+| Study | Dataset id | n | Answer model | Judge model | Purpose |
 |---|---|---|---|---|---|
 | 2A | longmemeval_s_sample10 (full haystack) | 10 | qwen2.5:7b | qwen2.5:7b | protocol replication of the pre-fix n=10 run |
-| 2B | longmemeval_oracle (filtered haystack, 6 question types) | 50 | qwen2.5:7b | qwen2.5:7b | primary n=50 scale-up |
-| 2C | locomo_refined_public | 50 | qwen2.5:7b | qwen2.5:7b | cross-benchmark replication |
-| 2D | longmemeval_oracle | 50 | gemma3:12b | qwen2.5:7b | model robustness (cross-design) |
+| 2B | longmemeval_oracle_n50 (filtered haystack, 6 question types) | 50 | qwen2.5:7b | qwen2.5:7b | primary n=50 scale-up |
+| 2C | locomo_n50 (question-level subset; conversations joined at load) | 50 | qwen2.5:7b | qwen2.5:7b | cross-benchmark replication |
+| 2D | longmemeval_oracle_n50 | 50 | gemma3:12b | qwen2.5:7b | model robustness (cross-design) |
 | 2E | 2B subsample | 20 | — | gemma3:12b (re-judge) | inter-judge agreement (audit I2) |
+
+Commands (run from the repository root; results go to per-study directories):
+
+    OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
+      python -m experiments.run_oracle_experiments \
+      --dataset longmemeval_s_sample10 --limit 10 \
+      --out results/study2a_longmemeval_s
+
+Study sets are rebuilt with `experiments/build_study_set.py` at fixed seeds
+(20261018); see README data section for provenance and license notes.
 
 Cross-model judging in 2D/2E avoids answer-model self-preference bias in the
 semantic evaluator. Study 2B uses a single judge for internal consistency;
-2E quantifies how much that choice matters.
+2E quantifies how much that choice matters. Judge agreement is measured with
+`experiments/rejudge_answers.py` (re-judges the *same stored answers* with a
+second judge model, isolating judge variance from answer variance) and
+`experiments/paired_stats.py --judge-input` (Cohen's kappa + raw agreement).
+Condition comparisons use the same script's exact McNemar test and paired
+bootstrap CIs.
 
 ## Reproducibility rules
 
