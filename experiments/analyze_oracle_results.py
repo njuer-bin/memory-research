@@ -1,4 +1,11 @@
-"""Analyze an existing oracle-experiment comparison.jsonl without re-running the LLM.
+"""DEPRECATED post-hoc diagnostic for oracle-experiment comparison.jsonl.
+
+Kept for inspecting individual samples, but the token-F1 threshold sweep and
+the bootstrap CIs over lexical correctness are audit finding C1 practices:
+lexical metrics are reproducibility reports only and never attribution
+inputs. Use experiments/paired_stats.py for condition comparisons (semantic
+verdicts, exact McNemar, paired bootstrap) and the per-row traces for
+sample-level inspection.
 
 This is a post-hoc diagnostic step. It:
 - prints every sample's question/reference/predictions;

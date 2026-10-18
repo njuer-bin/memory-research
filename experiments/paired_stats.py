@@ -47,9 +47,15 @@ def answer(row: dict[str, Any], mode: str) -> dict[str, Any]:
 
 
 def correct_flag(row: dict[str, Any], mode: str) -> bool | None:
-    """Semantic verdict only; lexical metrics are never attribution input."""
+    """Semantic verdict only; lexical metrics are never attribution input.
+
+    The answer dict carries two flags: ``correct`` is the lexical verdict
+    (EM/F1/temporal/phrase) reported for reproducibility only, and
+    ``semantic_correct`` is the judge verdict that feeds attribution. This
+    function deliberately reads the latter.
+    """
     a = answer(row, mode)
-    c = a.get("correct")
+    c = a.get("semantic_correct")
     return None if c is None else bool(c)
 
 
