@@ -54,11 +54,36 @@ roughly 3–5 min/record (3 answer generations + 4 judge calls + embeddings).
 
 Commands (run from the repository root; results go to per-study directories):
 
+    # 2B (primary) and 2A (pilot) — same command shape, different dataset/limit
     OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
     OLLAMA_MODEL=qwen2.5:7b OLLAMA_JUDGE_MODEL=qwen2.5:7b \
       python -m experiments.run_oracle_experiments \
       --dataset longmemeval_oracle_n50 --limit 50 \
       --out results/study2b_longmemeval_oracle_n50
+
+    # 2C — LoCoMo cross-benchmark
+    OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
+    OLLAMA_MODEL=qwen2.5:7b OLLAMA_JUDGE_MODEL=qwen2.5:7b \
+      python -m experiments.run_oracle_experiments \
+      --dataset locomo_n50 --limit 50 --out results/study2c_locomo_n50
+
+    # 2D — gemma3:12b answers, qwen judge (cross-model design)
+    OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
+    OLLAMA_MODEL=gemma3:12b OLLAMA_JUDGE_MODEL=qwen2.5:7b \
+      python -m experiments.run_oracle_experiments \
+      --dataset longmemeval_oracle_n50 --limit 50 \
+      --out results/study2d_longmemeval_gemma
+
+    # 2E — re-judge a seeded 20-record subsample of 2B with gemma3:12b, then kappa
+    SEMANTIC_JUDGE_MODEL=gemma3:12b \
+      python -m experiments.rejudge_answers \
+      --input results/study2b_longmemeval_oracle_n50/comparison.jsonl \
+      --output results/study2e_judge_gemma/comparison.jsonl \
+      --limit 20 --seed 20261018
+    python experiments/paired_stats.py \
+      --input results/study2b_longmemeval_oracle_n50/comparison.jsonl \
+      --judge-input results/study2e_judge_gemma/comparison.jsonl \
+      --dataset longmemeval_oracle_n50
 
 After every study: `python experiments/audit_embedding_dims.py` must report
 all-1024-dim, then `python experiments/paired_stats.py --input
