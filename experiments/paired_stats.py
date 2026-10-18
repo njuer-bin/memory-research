@@ -240,15 +240,21 @@ def main() -> None:
             for mode in MODES:
                 primary.append(correct_flag(row, mode))
                 alternate.append(correct_flag(alt, mode))
+        pairs = [
+            (x, y) for x, y in zip(primary, alternate)
+            if x is not None and y is not None
+        ]
         kappa, n = cohens_kappa(primary, alternate)
-        agree = sum(1 for x, y in zip(primary, alternate) if x == y)
-        both = sum(1 for x, y in zip(primary, alternate)
-                   if x is not None and y is not None)
+        agree = sum(1 for x, y in pairs if x == y)
         print(f"n paired verdicts = {n}")
-        print(f"raw agreement = {agree}/{both} "
-              f"({agree / both:.3f})" if both else "no overlap")
+        if pairs:
+            print(f"raw agreement = {agree}/{len(pairs)} ({agree / len(pairs):.3f})")
+        else:
+            print("no overlapping decided verdicts")
         if kappa is not None:
             print(f"Cohen's kappa = {kappa:.3f}")
+        else:
+            print("Cohen's kappa = undefined (degenerate marginals)")
 
 
 if __name__ == "__main__":
