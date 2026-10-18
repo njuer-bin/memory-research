@@ -549,11 +549,12 @@ def _build_summary(dataset: str, limit: int, rows: list[dict[str, Any]], errors:
     }
 
 
-def run(dataset: str, limit: int) -> dict[str, Any]:
-    OUT.mkdir(parents=True, exist_ok=True)
-    jsonl = OUT / "comparison.jsonl"
-    progress_path = OUT / "progress.json"
-    summary_path = OUT / "summary.json"
+def run(dataset: str, limit: int, out_dir: Path | None = None) -> dict[str, Any]:
+    out = out_dir or OUT
+    out.mkdir(parents=True, exist_ok=True)
+    jsonl = out / "comparison.jsonl"
+    progress_path = out / "progress.json"
+    summary_path = out / "summary.json"
     jsonl.write_text("", encoding="utf-8")
     rows: list[dict[str, Any]] = []
     errors = 0
@@ -600,8 +601,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="locomo_refined_public")
     parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument(
+        "--out",
+        default=None,
+        help="Result directory (default: results/oracle_experiments). "
+        "Use one directory per study so raw results stay separable.",
+    )
     args = parser.parse_args()
-    run(args.dataset, args.limit)
+    run(args.dataset, args.limit, Path(args.out) if args.out else None)
 
 
 if __name__ == "__main__":

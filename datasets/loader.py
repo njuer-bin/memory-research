@@ -80,8 +80,8 @@ def iter_normalized(dataset_id:str,*,limit:int|None=None)->Iterator[dict[str,Any
     info=dataset_info(dataset_id)
     conversations=_locomo_conversations() if dataset_id=="locomo_refined_public" else {}
     for idx,raw in enumerate(iter_raw(dataset_id,limit=limit)):
-        if dataset_id in {"longmemeval_s_sample10","longmemeval_oracle"}:
-            yield normalize_longmemeval(raw,dataset=dataset_id,index=idx)
+        if dataset_id in {"longmemeval_s_sample10", "longmemeval_oracle", "longmemeval_oracle_n50"}:
+            yield normalize_longmemeval(raw, dataset=dataset_id, index=idx)
         elif dataset_id=="locomo_refined_public":
             cid = str(raw.get("sample_id") or raw.get("conversation_id") or "")
             conversation = conversations.get(cid)

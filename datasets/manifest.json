@@ -33,6 +33,28 @@
       "status": "ready"
     },
     {
+      "id": "longmemeval_oracle_n50",
+      "family": "LongMemEval",
+      "source": "datasets/data/longmemeval_oracle_n50.json",
+      "format": "json",
+      "capabilities": ["oracle_memory", "evidence_diagnostics", "multi_hop", "temporal"],
+      "status": "ready",
+      "sampling": {
+        "method": "stratified proportional sample by question_type",
+        "n": 50,
+        "seed": 20261018,
+        "source_dataset": "longmemeval_oracle",
+        "allocation": {
+          "temporal-reasoning": 13,
+          "multi-session": 13,
+          "knowledge-update": 8,
+          "single-session-user": 7,
+          "single-session-assistant": 6,
+          "single-session-preference": 3
+        }
+      }
+    },
+    {
       "id": "sample_conversation",
       "family": "local_sample",
       "source": "datasets/data/sample_conversation.json",
