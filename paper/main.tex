@@ -461,7 +461,9 @@ separately instead of forcing a failure label.
 
 \paragraph{Anonymization.} The public artifact will be anonymized for
 review (author-identifying metadata stripped; a separate anonymous branch
-is prepared); model-server endpoints and paths are scrubbed.
+is prepared by \texttt{scripts/make\_anonymous\_branch.sh}, with a
+verification grep and a fresh-repo push recipe for full history
+anonymization); model-server endpoints and paths are scrubbed.
 
 % ---------------------------------------------------------------------------
 \bibliographystyle{acl_natbib}
