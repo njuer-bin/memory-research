@@ -4,9 +4,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import time
 import traceback
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +17,9 @@ from evaluation.answer_generation import generate_and_score
 from evaluation.answer_semantic_eval import evaluate_answer
 from evaluation.gate import evaluate_evidence_gate
 from evaluation.lifecycle_metrics import STAGES, summarize_traces
+from memory_engine.analyzer import Fact
 from memory_engine.engine import MemoryEngine
-from memory_engine.models import AddMessage, AddRequest, SearchRequest
+from memory_engine.models import AddMessage, AddRequest, SearchRequest, fingerprint, new_id
 from tracing.dataset_trace import record_to_trace
 from tracing.engine_trace import artifacts_from_store, retrieval_artifacts, stage_match
 from evaluation.attribution import attribute_failure, control_failure_label
@@ -79,6 +82,7 @@ def _stage(gold: list[dict[str, Any]], artifacts: list[dict[str, Any]], mode: st
             "observed_count": match["observed_count"],
             "match_types": match.get("match_types", {}),
             "match_scores": match.get("match_scores", {}),
+            "provenance_only": match.get("provenance_only", []),
             "matches": match["matches"],
         },
     }
@@ -114,6 +118,71 @@ def _real_engine(record: dict[str, Any], idx: int) -> tuple[MemoryEngine, str]:
                 session_id=session["session_id"],
             ))
     log(f"    [ingest] {message_count} messages in {time.perf_counter() - t0:.2f}s")
+    return engine, user_id
+
+
+def _oracle_timestamp(ts: Any) -> int:
+    """Best-effort deterministic timestamp for oracle-injected memories."""
+    if isinstance(ts, (int, float)) and not isinstance(ts, bool):
+        return int(ts)
+    text = str(ts or "").strip()
+    if not text:
+        return 0
+    digits = re.fullmatch(r"\d{9,13}", text)
+    if digits:
+        return int(text)
+    for fmt in ("%I:%M %p on %d %B, %Y", "%d %B, %Y", "%B %d, %Y", "%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return int(datetime.strptime(text, fmt).timestamp() * 1000)
+        except ValueError:
+            continue
+    # Unknown format: keep insertion order stable without inventing a date.
+    return 0
+
+
+def _oracle_memory_engine(gold: list[dict[str, Any]], idx: int) -> tuple[MemoryEngine, str]:
+    """Engine pre-loaded with gold evidence as already-formed memories.
+
+    Oracle Memory makes formation/storage/evolution perfect by construction:
+    gold evidence is inserted directly as active facts with embeddings, then
+    the *same* retrieval/rerank/context pipeline runs as for Real Memory. Any
+    oracle_memory failure is therefore attributable to retrieval, rerank or
+    context assembly -- never to memory formation. This is what separates it
+    from Oracle Context, which injects the same evidence straight into the
+    answer context, bypassing the pipeline (audit finding C6: the two
+    conditions used to share one identical context and were indistinguishable).
+    """
+    user_id = f"oracle_mem_{idx}_{uuid.uuid4().hex}"
+    data_dir = ROOT / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db_path = data_dir / f"oracle_mem_{idx}_{uuid.uuid4().hex}.db"
+    engine = MemoryEngine(str(db_path))
+
+    for e in gold:
+        text = str(e.get("text") or e.get("content") or "")
+        if not text:
+            continue
+        ts = _oracle_timestamp(e.get("timestamp"))
+        fact = Fact(
+            id=new_id("fact"),
+            user_id=user_id,
+            subject="user",
+            predicate="oracle_evidence",
+            object=text[:200],
+            content=text,
+            timestamp=ts,
+            fingerprint=fingerprint(user_id, "oracle_evidence", text),
+            valid_from=ts,
+            valid_to=None,
+            status="active",
+            source="user",
+            source_session_id=e.get("source_id") or e.get("source"),
+            source_turn_id=e.get("turn_id") or e.get("turn"),
+        )
+        engine.store.insert_fact(fact)
+        vector = engine.embedder.embed(text)
+        engine.store.embed(fact.id, user_id, vector)
+        engine.vector_index.add(user_id, fact.id, vector)
     return engine, user_id
 
 
@@ -169,11 +238,23 @@ def _formation_diagnostics(gold: list[dict[str, Any]], stored: dict[str, list[di
     return diagnostics
 
 
+def _active(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rows that survive governance (facts can be superseded; nothing else can)."""
+    return [r for r in rows if str(r.get("status") or "active") == "active"]
+
+
 def _real_trace_stages(trace: Any, gold: list[dict[str, Any]], engine: MemoryEngine, user_id: str, real: list[dict[str, Any]], search_trace: dict[str, Any]) -> None:
     stored = artifacts_from_store(engine, user_id)
+    # Formation = everything the extractor produced (including facts that
+    # governance later superseded). Evolution = the current, post-governance
+    # belief state. The two used to be the same list, which made F3
+    # structurally untestable (audit finding C4): a fact that was formed but
+    # then superseded is exactly an evolution-stage loss and must surface as
+    # F3, not as a silent pass.
     formation = stored["facts"] + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
     storage = stored["raw"] + formation
-    evolution = formation
+    evolution = _active(stored["facts"]) + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
+    superseded = len(stored["facts"]) - len(_active(stored["facts"]))
     trace.formation = type(trace.formation)(**_stage(gold, formation, "real_memory"))
     trace.formation.details["diagnostics"] = _formation_diagnostics(gold, stored)
     trace.formation.details["semantic_memory_counts"] = {
@@ -186,6 +267,8 @@ def _real_trace_stages(trace: Any, gold: list[dict[str, Any]], engine: MemoryEng
     }
     trace.storage = type(trace.storage)(**_stage(gold, storage, "real_memory"))
     trace.evolution = type(trace.evolution)(**_stage(gold, evolution, "real_memory"))
+    trace.evolution.details["superseded_facts"] = superseded
+    trace.evolution.details["measured"] = True
     retrieval = search_trace.get("retrieval_candidates") or real
     rerank = search_trace.get("reranked") or real
     context = search_trace.get("context") or real
@@ -194,15 +277,49 @@ def _real_trace_stages(trace: Any, gold: list[dict[str, Any]], engine: MemoryEng
     trace.context = type(trace.context)(**_stage(gold, context, "real_memory_context"))
 
 
-def _oracle_memory_trace(gold: list[dict[str, Any]], oracle: list[dict[str, Any]]) -> dict[str, Any]:
-    stages = {stage: _stage(gold, oracle, "oracle_memory") for stage in ("formation", "storage", "evolution", "rerank")}
-    stages["retrieval"] = _stage(gold, oracle, "oracle_memory_bypass")
-    stages["context"] = _stage(gold, oracle, "oracle_memory_context")
+def _oracle_memory_trace(
+    gold: list[dict[str, Any]],
+    engine: MemoryEngine,
+    user_id: str,
+    search_trace: dict[str, Any],
+    real: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Measure the oracle-memory engine through the same lifecycle stages.
+
+    Formation/storage/evolution are expected to be perfect by construction
+    (gold was injected as active facts); measuring them anyway validates the
+    injection. Retrieval/rerank/context are the informative stages: they show
+    whether the pipeline can surface evidence that is perfectly in memory.
+    """
+    stored = artifacts_from_store(engine, user_id)
+    formation = stored["facts"] + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
+    storage = stored["raw"] + formation
+    evolution = _active(stored["facts"]) + stored["relations"] + stored["events"] + stored["rules"] + stored["profiles"]
+    stages = {
+        "formation": _stage(gold, formation, "oracle_memory_formation"),
+        "storage": _stage(gold, storage, "oracle_memory_storage"),
+        "evolution": _stage(gold, evolution, "oracle_memory_evolution"),
+    }
+    retrieval = search_trace.get("retrieval_candidates") or real
+    rerank = search_trace.get("reranked") or real
+    context = search_trace.get("context") or real
+    stages["retrieval"] = _stage(gold, retrieval, "oracle_memory_retrieval_candidates")
+    stages["rerank"] = _stage(gold, rerank, "oracle_memory_reranked")
+    stages["context"] = _stage(gold, context, "oracle_memory_context")
     return stages
 
 
 def _oracle_context_trace(gold: list[dict[str, Any]], oracle: list[dict[str, Any]]) -> dict[str, Any]:
-    result = {stage: _stage(gold, [], "oracle_context_not_measured") for stage in ("formation", "storage", "evolution", "retrieval", "rerank")}
+    """Oracle Context bypasses the whole lifecycle: only context is measured.
+
+    The unmeasured stages carry ``measured: False`` so the attribution
+    protocol skips them instead of reading empty ``found`` lists as total
+    lifecycle failure.
+    """
+    result = {
+        stage: {**_stage(gold, [], "oracle_context_not_measured"), "measured": False}
+        for stage in ("formation", "storage", "evolution", "retrieval", "rerank")
+    }
     result["context"] = _stage(gold, oracle, "oracle_context")
     return result
 
@@ -338,9 +455,23 @@ def run_record(record: dict[str, Any], idx: int) -> dict[str, Any]:
     real_context = search_trace.get("context") or real
     judge_gold = _judge_evidence(gold)
 
+    # Oracle Memory: gold injected as formed memories, then the SAME pipeline.
+    log("    [oracle-memory] injecting gold as formed memories")
+    oracle_engine, oracle_user = _oracle_memory_engine(gold, idx)
+    oracle_results = oracle_engine.search(
+        SearchRequest(query=record["question"], user_id=oracle_user, top_k=10, multi_hop=True)
+    )
+    oracle_retrieved = retrieval_artifacts(oracle_results)
+    oracle_memory_context = oracle_engine.last_search_trace.get("context") or oracle_retrieved
+    log(f"    [oracle-memory] context items={len(oracle_memory_context)}")
+
+    # Oracle Context: gold evidence injected straight into the answer context,
+    # bypassing retrieval entirely. Same evidence, different delivery path.
+    oracle_context_items = oracle
+
     real_answer = _score_mode_answer(record["question"], record.get("answer", ""), real_context)
-    oracle_memory_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle)
-    oracle_context_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle)
+    oracle_memory_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle_memory_context)
+    oracle_context_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle_context_items)
     for ans in (real_answer, oracle_memory_answer, oracle_context_answer):
         ans.update(_semantic_verdict(record["question"], ans.get("answer") or "", judge_gold))
 
@@ -360,7 +491,9 @@ def run_record(record: dict[str, Any], idx: int) -> dict[str, Any]:
         gold_evidence=gold,
     )
 
-    oracle_memory = _oracle_memory_trace(gold, oracle)
+    oracle_memory = _oracle_memory_trace(
+        gold, oracle_engine, oracle_user, oracle_engine.last_search_trace, oracle_retrieved
+    )
     oracle_memory.update({
         "answer": {**oracle_memory_answer, "mode": "oracle_memory"},
         "evidence_sufficiency": gate,

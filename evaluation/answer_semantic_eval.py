@@ -20,6 +20,24 @@ MODEL = os.getenv("SEMANTIC_JUDGE_MODEL", os.getenv("ANSWER_MODEL", "qwen2.5:7b"
 TEMPERATURE = float(os.getenv("SEMANTIC_JUDGE_TEMPERATURE", "0"))
 TIMEOUT = float(os.getenv("SEMANTIC_JUDGE_TIMEOUT_SECONDS", "180"))
 MIN_ANCHOR_TOKENS = int(os.getenv("SEMANTIC_MIN_ANCHOR_TOKENS", "2"))
+# Narrow deterministic-pass rules (audit finding C5). The pre-judge and
+# post-judge auto-correction channels used to accept ANY shared >=2-token
+# span, which silently passed wrong answers such as "went to the park"
+# against evidence "went to the LGBTQ support group". The lexical channel now
+# requires the shared span to (almost) fully cover the candidate answer,
+# measured over content-bearing tokens only.
+DETERMINISTIC_COVERAGE = float(os.getenv("SEMANTIC_DETERMINISTIC_COVERAGE", "0.8"))
+_COVERAGE_STOPWORDS = frozenset({
+    "the", "and", "for", "with", "was", "were", "are", "is", "of", "to",
+    "in", "on", "at", "a", "an", "it", "its", "this", "that", "but", "or",
+    "as", "by", "from", "has", "have", "had", "be", "been", "being", "not",
+    "no", "yes", "so", "if", "then", "than", "too", "very", "can", "could",
+    "will", "would", "shall", "should", "may", "might", "must", "do", "does",
+    "did", "into", "over", "under", "about", "after", "before", "there",
+    "when", "where", "why", "how", "all", "any", "both", "each", "more",
+    "most", "other", "some", "such", "only", "own", "same", "just", "now",
+    "also",
+})
 _RELATIVE_TEMPORAL = re.compile(
     r"\b(?:today|yesterday|tomorrow|this week|last week|next week|"
     r"this month|last month|next month|last|next)\s+"
@@ -100,9 +118,50 @@ def _meaningful_exact_anchor(candidate: str, evidence: list[dict[str, Any]]) -> 
     return None
 
 
-def _deterministic_support(candidate: str, evidence: list[dict[str, Any]]) -> tuple[str, str] | None:
-    """Return (kind, detail) only for strong evidence-coverage cases."""
+def _coverage_tokens(text: str) -> list[str]:
+    """Content-bearing tokens: words of length >= 3 plus every CJK character.
+
+    Stopwords are excluded so that a shared "went to the" prefix cannot make a
+    wrong tail ("... the park" vs "... the LGBTQ support group") look covered.
+    """
+    return [
+        t for t in _tokens(text)
+        if (len(t) >= 3 or re.search(r"[\u4e00-\u9fff]", t)) and t not in _COVERAGE_STOPWORDS
+    ]
+
+
+def _full_candidate_anchor(candidate: str, evidence: list[dict[str, Any]]) -> str | None:
+    """Narrow rule R1: shared span that (almost) fully covers the candidate.
+
+    The anchor is a contiguous subsequence of the candidate by construction,
+    so coverage is len(anchor content tokens) / len(candidate content tokens).
+    A pass is granted only at DETERMINISTIC_COVERAGE or above, i.e. the
+    candidate answer is essentially a verbatim quote of the evidence. Partial
+    overlaps are left to the LLM judge (audit finding C5).
+    """
     anchor = _meaningful_exact_anchor(candidate, evidence)
+    if anchor is None:
+        return None
+    candidate_tokens = _coverage_tokens(candidate)
+    anchor_tokens = _coverage_tokens(anchor)
+    if not candidate_tokens or not anchor_tokens:
+        return None
+    if len(anchor_tokens) / len(candidate_tokens) < DETERMINISTIC_COVERAGE:
+        return None
+    return anchor
+
+
+def _deterministic_support(candidate: str, evidence: list[dict[str, Any]]) -> tuple[str, str] | None:
+    """Return (kind, detail) only for strong evidence-coverage cases.
+
+    Two documented narrow rules:
+    - R1 lexical: the candidate is (almost) a verbatim quote of the evidence
+      (shared span covers >= DETERMINISTIC_COVERAGE of the candidate).
+    - R2 temporal: the candidate is a pure date/relative expression that
+      resolves to the same date as a relative expression in timestamped
+      evidence (score_answer enforces full-string temporal forms).
+    """
+    anchor = _full_candidate_anchor(candidate, evidence)
     if anchor:
         return "deterministic_lexical", anchor
 
@@ -193,7 +252,10 @@ def evaluate_answer(question: str, candidate: str, evidence: list[dict[str, Any]
     adjudication = "judge"
     anchor = None
     if evidence_sufficient and not judge_correct and confidence != "low":
-        anchor = _meaningful_exact_anchor(candidate, evidence)
+        # Post-judge repair uses the same narrow R1 rule as the pre-judge
+        # channel: only a candidate that is essentially a verbatim quote of
+        # the evidence may override a judge false negative.
+        anchor = _full_candidate_anchor(candidate, evidence)
         if anchor:
             final_correct = True
             adjudication = "lexical_anchor_override"

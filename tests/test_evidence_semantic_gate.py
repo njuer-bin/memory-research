@@ -1,4 +1,7 @@
-from evaluation.answer_semantic_eval import _deterministic_support
+from evaluation.answer_semantic_eval import (
+    _deterministic_support,
+    _full_candidate_anchor,
+)
 
 
 def test_relative_temporal_evidence_is_deterministically_sufficient():
@@ -39,3 +42,25 @@ def test_unrelated_evidence_does_not_get_deterministic_override():
     result = _deterministic_support("adoption agencies", evidence)
 
     assert result is None
+
+
+def test_partial_overlap_is_not_deterministically_sufficient():
+    """C5: a shared prefix must not auto-pass a wrong answer.
+
+    "went to the park" overlaps "went to the LGBTQ support group" but is a
+    different event; only the LLM judge may score it.
+    """
+    evidence = [
+        {"content": "Caroline went to the LGBTQ support group yesterday."},
+    ]
+
+    result = _deterministic_support("Caroline went to the park", evidence)
+
+    assert result is None
+
+
+def test_full_candidate_anchor_requires_high_coverage():
+    evidence = [{"content": "Caroline went to the LGBTQ support group."}]
+    assert _full_candidate_anchor("Caroline went to the LGBTQ support group", evidence) is not None
+    assert _full_candidate_anchor("Caroline went to the park", evidence) is None
+    assert _full_candidate_anchor("the park", evidence) is None
