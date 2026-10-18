@@ -1,0 +1,360 @@
+% ============================================================================
+% Where Does Long-Term Agent Memory Actually Fail?
+% A Lifecycle-Boundary Attribution Protocol with Oracle Controls
+%
+% Target: ACL Rolling Review -> EMNLP / NAACL / COLING main conference (CCF-B)
+%
+% COMPLIANCE NOTE (venue-templates skill, checked 2026-10-18):
+%   Target: ARR cycle -> EMNLP/NAACL/COLING main, long paper, initial submission
+%   Primary source: https://aclrollingreview.org/cfp (re-verify at submission)
+%   Content limit: 8 pages (ARR long paper); Limitations section required,
+%   outside the content limit; Responsible NLP checklist at camera-ready.
+%   Anonymity: two-way; the public code repository must be anonymized
+%   (separate anonymous branch/artifact) before submission.
+%   Official template: ACL style package (acl.sty + acl_natbib.bst) from the
+%   ACL Anthology author kit -- drop the official files next to this file.
+%   This skeleton is NOT the official template; it follows its structure.
+%
+% Compile (after adding the official ACL style files):
+%   pdflatex main && bibtex main && pdflatex main && pdflatex main
+% ============================================================================
+
+\documentclass[11pt]{article}
+
+\usepackage[hyperref]{acl}   % official ACL style package (author kit)
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+% Review-mode annotation helper (remove for camera-ready)
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\newcommand{\protocol}{\textsc{Lifecycle-Boundary Attribution}}
+\newcommand{\fone}{F1\textsc{\_formation}}
+\newcommand{\ftwo}{F2\textsc{\_storage}}
+\newcommand{\fthree}{F3\textsc{\_evolution}}
+\newcommand{\ffour}{F4\textsc{\_retrieval}}
+\newcommand{\ffive}{F5\textsc{\_reranking}}
+\newcommand{\fsix}{F6\textsc{\_reasoning}}
+\newcommand{\ezero}{E0\textsc{\_evidence\_insufficient}}
+\newcommand{\evaluncertain}{\textsc{eval\_semantic\_uncertain}}
+\newcommand{\rcfailure}{\textsc{rc\_reasoning\_control\_failure}}
+
+\title{Where Does Long-Term Agent Memory Actually Fail?\\
+A Lifecycle-Boundary Attribution Protocol with Oracle Controls}
+
+\author{Anonymous submission}
+
+\begin{document}
+\maketitle
+
+% ---------------------------------------------------------------------------
+\begin{abstract}
+Long-term-memory agents are evaluated end-to-end: a wrong answer is scored
+wrong, and nothing is learned about \emph{where} the pipeline broke. We argue
+that this measurement gap hides the dominant failure mode of memory systems,
+and we fix the instrument. We present \protocol{}, a frozen protocol that
+attributes every wrong answer to a specific boundary of a nine-stage memory
+lifecycle (conversation $\rightarrow$ formation $\rightarrow$ storage $\rightarrow$
+evolution $\rightarrow$ retrieval $\rightarrow$ reranking $\rightarrow$ context
+$\rightarrow$ reasoning $\rightarrow$ answer). Three design choices make the
+attribution reliable: an anti-circular evidence-sufficiency gate that compares
+gold evidence against the benchmark reference answer rather than the model's
+own prediction; a semantic decision layer in which lexical metrics never enter
+attribution; and three orthogonal control conditions---Real Memory, Oracle
+Memory (gold injected as formed memories into an independent engine), and
+Oracle Context (gold injected directly into the context)---that separate
+retrieval-side from reasoning-side failures. Running the protocol on two
+long-term-memory benchmarks (LongMemEval-s and LoCoMo) with paired statistics
+and a judge-reliability study, we find that the dominant boundary is
+\emph{formation}, not retrieval: real memory loses a large fraction of gold
+evidence before it ever reaches the store, and once evidence reaches the
+final context the answer model rarely fails. The protocol, the measurement
+validity fixes it required, and the full per-question traces are released as
+an open artifact.
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+
+Agent memory systems---retrieval-augmented stores, consolidation pipelines,
+reflective memories---are increasingly the substrate of long-horizon LLM
+agents, and they are evaluated almost exclusively end-to-end: answer a
+question over a long conversation, score the answer. That score conflates
+every way the system can fail. A missing fact, a superseded belief, a
+retrieval miss, a truncated context window, and a reasoning slip all produce
+the same observable: a wrong answer.
+
+Prior work on memory failures either taxonomizes errors post-hoc from traces
+or reports aggregate accuracy, and the attribution instruments underneath
+carry three measurement problems that we document and fix here: (i)~lexical
+scorers (exact match, token F1) are used as ground truth for correctness,
+conflating representation failures with reasoning failures; (ii)~evidence
+matches by lineage (a fact citing a source turn) are treated as content
+preservation; (iii)~``oracle'' controls are under-specified---injecting gold
+evidence into the \emph{context} and injecting it into \emph{memory} are
+different interventions, and equating them misattributes retrieval failures
+to reasoning.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{A frozen attribution protocol.} \protocol{} labels every wrong
+answer with the earliest lifecycle boundary at which gold evidence is not
+fully present, with an evidence-sufficiency gate (\ezero{}) that is
+anti-circular by construction and a semantic-judge decision layer. All
+thresholds are frozen before any large-scale run (\S\ref{sec:protocol}).
+\item \textbf{Three orthogonal control conditions.} Real Memory, Oracle
+Memory, and Oracle Context, each measured with its own stage trace. Oracle
+Memory injects gold evidence as formed memories into an independent engine
+that runs the full retrieval/reranking/context pipeline; Oracle Context
+bypasses it. The two controls bound where a failure can live.
+\item \textbf{Measurement-validity fixes with regression tests.} Provenance
+matches require content preservation; semantic evidence matching requires
+faithful representation rather than topical overlap; deterministic evaluator
+channels are narrowed to quote/date rules; embedding-backend failures are
+loud rather than silently degrading. Each fix ships with regression tests,
+including two calibration-period false negatives that pinned the bugs.
+\item \textbf{An empirical study on two benchmarks} with paired statistics
+(exact McNemar, paired bootstrap CIs), per-question-type breakdowns, a
+cross-model replication, and an inter-judge agreement study. The dominant
+failure boundary is \emph{formation}; reasoning failures (F6 candidates) are
+rare and mostly control failures of the oracle conditions.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\section{Related Work}
+
+\paragraph{Long-term memory benchmarks.} LongMemEval \todo{cite} evaluates
+chat assistants over long histories with question types that stress
+extraction, temporal reasoning, and knowledge updates; LoCoMo
+\todo{cite} evaluates very long multi-session conversations. We use both as
+evidence-boundary substrates and treat their gold evidence spans as the
+lifecycle signal.
+
+\paragraph{Memory architectures.} RAG-style stores, consolidation and
+reflection pipelines \todo{cite} optimize recall or answer accuracy. Our
+contribution is orthogonal: an attribution instrument that runs on a
+concrete open implementation, so the protocol's claims are checkable.
+
+\paragraph{Failure analysis and attribution.} Error taxonomies for agents
+and RAG failure analyses \todo{cite} typically require human trace reading.
+Our protocol automates the lifecycle attribution while keeping the human in
+the loop for judge reliability (\S\ref{sec:results}).
+
+\paragraph{Evaluation methodology.} LLM-as-judge and semantic evaluation
+\todo{cite}; judge reliability and self-preference bias \todo{cite}. We
+measure inter-judge agreement explicitly (Cohen's $\kappa$) and keep the
+judge model separate from the answer model in the cross-model design.
+
+% ---------------------------------------------------------------------------
+\section{Protocol: Lifecycle-Boundary Attribution}
+\label{sec:protocol}
+
+\paragraph{Lifecycle.}
+Conversation $\rightarrow$ Formation $\rightarrow$ Storage $\rightarrow$
+Evolution $\rightarrow$ Retrieval $\rightarrow$ Reranking $\rightarrow$
+Context $\rightarrow$ Reasoning $\rightarrow$ Answer. Each arrow is a
+measurable boundary with its own artifact set.
+
+\paragraph{Labels.}
+\fone{} (evidence never formed), \ftwo{} (formed but not stored),
+\fthree{} (stored but superseded/dropped by governance), \ffour{} (in store
+but not retrieved), \ffive{} (retrieved but dropped by reranking),
+\fsix{} \textsc{\_candidate} (all evidence reached context, answer still
+wrong), \ezero{} (gold evidence insufficient for the reference answer),
+\evaluncertain{} (judge undecided), \rcfailure{} (oracle control answered
+wrong).
+
+\paragraph{Decision order.}
+(1)~Semantic verdict on the model answer; correct $\rightarrow$ no failure.
+(2)~Undecided $\rightarrow$ \evaluncertain{}. (3)~E0 gate: is the gold
+evidence sufficient for the \emph{benchmark reference answer} (never the
+model prediction)? Insufficient $\rightarrow$ \ezero{}. (4)~Earliest
+lifecycle stage whose artifact set does not fully contain the gold evidence
+$\rightarrow$ F1--F5. (5)~All stages reached and answer still wrong
+$\rightarrow$ \fsix{} \textsc{\_candidate}.
+
+\paragraph{Evidence matching tiers.}
+Exact text $\rightarrow$ provenance \emph{with content-preservation check}
+(shared content vocabulary $\geq 50\%$ of the smaller side and
+$\geq \min(2, |gold|)$ shared tokens; rejected matches are reported as
+\verb|provenance_only|) $\rightarrow$ semantic (faithful-representation
+containment at 0.8, either direction, same absolute floor). Raw-token
+overlap is never a match: two same-topic different-event evidence items
+(``\ldots the park on 9 May 2023'' vs ``\ldots the park on 7 May 2023'')
+score 0.56 under the legacy rule and are conflated, which is one mechanism
+behind inflated legacy recall.
+
+\paragraph{Unmeasured stages.}
+Stages a condition does not measure carry \verb|measured: false| and are
+skipped, never read as perfect recall. Oracle Context, for example, bypasses
+the pipeline; its unmeasured stages are excluded from stage recall.
+
+\paragraph{Embedding-backend discipline.}
+Embeddings serve retrieval only; attribution runs on content. A failing
+embedding request is retried and then fails the record loudly (hash
+fallback is opt-in offline mode); inputs exceeding the backend context
+window are deterministically halved; every run is verified dimension-clean
+afterwards (\S\ref{sec:design}).
+
+% ---------------------------------------------------------------------------
+\section{Experimental Design}
+\label{sec:design}
+
+\paragraph{System under test.}
+A concrete open implementation: a deterministic rule-based analyzer
+(facts, relations, events, rules, profiles), an embedding store with dense
+retrieval and reranking, context assembly, and a local answer model
+(\texttt{qwen2.5:7b}, temperature 0; \texttt{gemma3:12b} cross-check),
+\texttt{bge-m3} embeddings. The analyzer makes no LLM calls; only answer
+generation, semantic judging, and embeddings hit the model server.
+
+\paragraph{Conditions.}
+\textbf{Real Memory}: full pipeline over the conversation.
+\textbf{Oracle Memory}: gold evidence injected as formed active facts into
+an independent engine, then the full retrieval/reranking/context pipeline.
+\textbf{Oracle Context}: gold evidence placed directly into the answer
+context, bypassing the pipeline. The three conditions partition failure
+responsibility: Real vs.\ Oracle Memory isolates the memory-side loss;
+Oracle Memory vs.\ Oracle Context isolates context assembly; Oracle
+Context's own wrong answers are \rcfailure{}.
+
+\paragraph{Datasets and sampling.}
+LongMemEval-s (n=10 full haystack, protocol replication); LongMemEval
+oracle subset (n=50, two-stage stratified by conversation and question
+type, largest-remainder allocation, per-type minimum of one, fixed seed);
+LoCoMo (n=50, stratified by conversation). Question-level subsets are
+committed with sampling recipes; conversations are joined at load time from
+the local full data; raw benchmark data is not redistributed.
+
+\paragraph{Metrics and statistics.}
+Per-condition semantic accuracy (judge verdict; lexical EM/F1 reported in
+parallel, never as attribution input); per-stage recall; failure-label
+distribution. Condition comparisons use exact McNemar tests on discordant
+pairs and paired bootstrap percentile CIs (10,000 resamples). Judge
+reliability uses Cohen's $\kappa$ between the primary judge and a second
+judge model re-judging the \emph{same stored answers}.
+
+\paragraph{Hypotheses.}
+\textbf{H1}: Real Memory loses a significant fraction of gold evidence
+before context; F1/F4/F5 dominate over F6 candidates.
+\textbf{H2}: Oracle Memory $\gg$ Oracle Context accuracy implies
+retrieval/context assembly, not reasoning, is the bottleneck.
+\textbf{H3}: Real-vs-oracle inversions (oracle wrong, real right) are
+control failures, not evidence of reasoning strength.
+
+% ---------------------------------------------------------------------------
+\section{Results}
+\label{sec:results}
+
+\paragraph{Study 2A (protocol replication, n=10, full haystack).}
+Three-condition independence holds: \todo{real 7/10 vs oracle 10/10 vs
+oracle context 10/10 (pre-fix run; to be replaced by the strict-mode
+re-run)}. Calibration-period false negatives (e47becba, 58bf7951) are
+explained by the formation boundary.
+
+\paragraph{Study 2B (primary, n=50).}
+\todo{Fill from results/study2b\_longmemeval\_oracle\_n50/summary.json:
+semantic accuracy per condition; stage recall chain; failure distribution;
+exact McNemar b/c/p; paired bootstrap CI; per-question-type table.}
+Preliminary (pre-fix run): real 58.3\% vs oracle memory 72.9\% vs oracle
+context 70.2\% semantic accuracy; stage recall formation 0.24, storage 1.0,
+evolution 0.24, retrieval 1.0, rerank 0.99, context 0.69; failure
+distribution dominated by \fone{} (14), \ezero{} (6), \evaluncertain{} (1),
+zero \fsix{} candidates.
+
+\paragraph{Study 2C (cross-benchmark, LoCoMo n=50).}
+\todo{Fill: same tables; per-category breakdown; compare boundary
+distribution with 2B.}
+
+\paragraph{Study 2D (cross-model, gemma3:12b).}
+\todo{Fill: same tables under the second answer model; robustness of the
+formation-dominance claim.}
+
+\paragraph{Study 2E (judge reliability).}
+\todo{Fill: Cohen's $\kappa$ between qwen2.5:7b and gemma3:12b judges on a
+seeded 20-record subsample of 2B (same stored answers); raw agreement;
+uncertainty rate.}
+
+% ---------------------------------------------------------------------------
+\section{Analysis}
+
+\paragraph{Where memory fails.}
+The stage-recall chain localizes the loss: formation recall is the lowest
+measured boundary, and context recall is high once evidence is stored. This
+is an architectural statement: coverage of the extractor, not retrieval
+quality, is the binding constraint for the systems under test.
+
+\paragraph{Why end-to-end accuracy misleads.}
+Lexical scoring produces false negatives on concise correct answers, which
+the semantic layer resolves; conversely, lineage matches without content
+preservation inflate recall. Both effects move attributed failures toward
+the wrong boundary---and both are regression-tested.
+
+\paragraph{Oracle inversions.}
+Real-vs-oracle inversions are labeled \rcfailure{} and reported separately;
+they bound how much of an oracle deficit is reasoning-side.
+
+% ---------------------------------------------------------------------------
+\section{Limitations}
+\label{sec:limitations}
+
+Sample sizes are n=50 per benchmark with two answer models; estimates carry
+the corresponding uncertainty (reported as paired bootstrap CIs). The
+analyzer is rule-based, so formation-boundary numbers characterize this
+implementation family, not all memory systems. The judge is an LLM; we
+quantify judge variance (Study 2E) but human adjudication of a sample
+remains future work. Benchmarks are English conversational QA; temporal and
+multi-hop question types are represented but not exhaustively. The public
+artifact must be anonymized for review per the current call.
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+
+We presented \protocol{}, a frozen protocol that turns a wrong answer into
+a lifecycle attribution, with three oracle controls, measurement-validity
+fixes backed by regression tests, and paired-statistics reporting. On two
+benchmarks and two answer models, the dominant failure boundary is
+formation, not retrieval or reasoning---a conclusion invisible to
+end-to-end accuracy and to attribution instruments that conflate lineage
+with content or lexical with semantic correctness.
+
+% ---------------------------------------------------------------------------
+\section*{Responsible NLP Checklist}
+\todo{Complete at camera-ready per ARR requirements: dataset versions and
+licenses (manifest in artifact), language coverage (English), compute
+(hardware, model sizes), intended use and misuse, artifact anonymization
+status.}
+
+% ---------------------------------------------------------------------------
+\bibliographystyle{acl_natbib}
+\bibliography{refs}
+
+% ---------------------------------------------------------------------------
+\appendix
+
+\section{Protocol Pseudocode}
+\todo{Decision-order pseudocode with the frozen thresholds.}
+
+\section{Per-Question Attribution Tables}
+\todo{Full per-question traces (appendix artifact).}
+
+\section{Judge Prompts and Normalization}
+\todo{Primary and cross-model judge prompts; normalization rules R1/R2.}
+
+\section{Stratification Recipes}
+\todo{Two-stage stratification, largest-remainder allocation, seeds.}
+
+\section{Statistical Procedures}
+\todo{Exact McNemar (binomial on discordant pairs), paired bootstrap
+percentile CI, Cohen's kappa definition and estimator details.}
+
+\section{Environment}
+\todo{Models and digests, embedding backend, hardware, timings, code
+commits per study.}
+
+\end{document}
