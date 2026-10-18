@@ -78,8 +78,23 @@ behind the legacy all-1.00 lifecycle recall. A distilled fact ("Caroline
 attended the LGBTQ support group") still matches its longer gold turn at 1.0
 by construction; a same-topic different-event sentence does not.
 
-## 5. Evolution stage is measured, not assumed (C4)
+## 4b. Embedding backend failures are loud; over-long inputs are halved (C8)
 
+The embedding backend serves retrieval only — evidence matching and
+attribution run on content, never on vector similarity. Two frozen rules:
+
+1. **No silent degradation.** A failing embedding request is retried
+   (3 × 60 s) and then raises `EmbeddingUnavailableError`; the record errors
+   visibly and is repaired with `--ids/--append`. Hash embeddings are used
+   only in explicit offline mode (`USE_OLLAMA_EMBEDDING=0`) or with
+   `EMBEDDING_ALLOW_FALLBACK=1`. Mixed-dimension vectors are refused by the
+   vector index. Every run verifies with `experiments/audit_embedding_dims.py`.
+2. **Over-context inputs are deterministically halved.** An input the backend
+   rejects for exceeding its context window (e.g. a 15,912-char pasted paper
+   excerpt vs bge-m3's 8192 tokens) is halved until accepted, with the
+   truncation logged. This affects retrieval of that one artifact only.
+
+## 5. Evolution stage is measured, not assumed (C4)
 - **Formation** = everything the extractor produced, including facts that
   governance later superseded.
 - **Evolution** = the post-governance current belief state: facts with
