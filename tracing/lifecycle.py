@@ -18,6 +18,17 @@ PROVENANCE_CONTENT_THRESHOLD = float(
     os.getenv("PROVENANCE_CONTENT_THRESHOLD", "0.5")
 )
 
+# Semantic (no-provenance) evidence matching uses the same faithful-
+# representation idea as C3, with a stricter bar: one side's content-bearing
+# vocabulary must be almost entirely contained in the other's. Symmetric
+# topical overlap is NOT enough. Audit finding C7: raw token overlap
+# (stopwords + character bigrams) scored 0.56 for two *different* evidence
+# items about the same topic ("... the park on 9 May 2023" vs "... the park
+# on 7 May 2023") and conflated them, inflating lifecycle recall.
+SEMANTIC_CONTENT_THRESHOLD = float(
+    os.getenv("SEMANTIC_CONTENT_THRESHOLD", "0.8")
+)
+
 _STOPWORDS = frozenset({
     "the", "and", "for", "with", "was", "were", "are", "is", "of", "to",
     "in", "on", "at", "a", "an", "it", "its", "this", "that", "but", "or",
@@ -52,10 +63,21 @@ def _tokens(text: str) -> set[str]:
 
 
 def _semantic_similarity(a: str, b: str) -> float:
-    ta, tb = _tokens(a), _tokens(b)
-    if not ta or not tb:
+    """Faithful-representation score between two texts (audit finding C7).
+
+    Uses content-bearing vocabulary only and reports the best *directional*
+    containment: one side's content words almost entirely inside the other's.
+    A distilled fact ("Caroline attended the LGBTQ group") scores 1.0 against
+    the longer gold turn it came from; two topically related but distinct
+    texts share only a topic and score well below the threshold, so they are
+    no longer conflated. Stopword-heavy raw overlap used to pass at 0.55.
+    """
+    a_m = _meaningful_tokens(a)
+    b_m = _meaningful_tokens(b)
+    if not a_m or not b_m:
         return 0.0
-    return len(ta & tb) / max(1, min(len(ta), len(tb)))
+    shared = len(a_m & b_m)
+    return max(shared / len(a_m), shared / len(b_m))
 
 
 def _meaningful_tokens(text: str) -> set[str]:
@@ -108,7 +130,7 @@ def match_evidence(
     gold: Iterable[dict[str, Any]],
     observed: Iterable[Any],
     *,
-    semantic_threshold: float = 0.55,
+    semantic_threshold: float = 0.8,
 ) -> dict[str, Any]:
     """Match gold evidence using exact, provenance, then semantic evidence.
 
@@ -119,7 +141,9 @@ def match_evidence(
     reported in ``provenance_only`` so recall is never inflated by lineage
     alone. Semantic matching handles normal memory formation, where a fact
     such as "用户居住在杭州" is a faithful representation of a longer source
-    turn.
+    turn; it requires content-vocabulary containment in one direction
+    (SEMANTIC_CONTENT_THRESHOLD) plus an absolute shared-token floor, because
+    topical overlap alone is not evidence identity (audit finding C7).
     """
     observed_list = list(observed)
     found: list[str] = []
@@ -177,10 +201,21 @@ def match_evidence(
                     best, best_type, best_score = artifact, "exact", 1.0
                     break
 
-        # 3. Semantic representation.
+        # 3. Semantic representation (C7): faithful content preservation,
+        # not topical overlap. Content vocabulary only, with an absolute
+        # floor of min(2, gold content tokens) shared tokens so that a
+        # single coincidental shared word cannot create a match.
         if best is None and gold_text:
+            gold_m = _meaningful_tokens(gold_text)
+            min_shared = min(2, len(gold_m))
             for artifact in observed_list:
-                score = _semantic_similarity(gold_text, _text(artifact))
+                art_m = _meaningful_tokens(_text(artifact))
+                if not art_m:
+                    continue
+                shared = len(gold_m & art_m)
+                if shared < min_shared:
+                    continue
+                score = max(shared / len(gold_m), shared / len(art_m))
                 if score > best_score:
                     best, best_type, best_score = artifact, "semantic", score
             if best_score < semantic_threshold:

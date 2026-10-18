@@ -280,7 +280,7 @@ def _oracle_context_trace(gold: list[dict[str, Any]], oracle: list[dict[str, Any
         stage: {**stage_dict(gold, [], "oracle_context_not_measured"), "measured": False}
         for stage in ("formation", "storage", "evolution", "retrieval", "rerank")
     }
-    result["context"] = _stage(gold, oracle, "oracle_context")
+    result["context"] = stage_dict(gold, oracle, "oracle_context")
     return result
 
 
@@ -562,7 +562,7 @@ def run(dataset: str, limit: int, out_dir: Path | None = None) -> dict[str, Any]
 
     log("=" * 72)
     log(f"Oracle experiment started: dataset={dataset}, limit={limit}")
-    log(f"Output: {OUT}")
+    log(f"Output: {out}")
     log("=" * 72)
     _write_progress(progress_path, {"status": "running", "dataset": dataset, "limit": limit, "completed": 0, "errors": 0, "elapsed_seconds": 0.0})
 

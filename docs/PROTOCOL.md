@@ -64,9 +64,19 @@ when the artifact content still recognizably preserves the gold text**:
 
 Rejected matches are recorded in `provenance_only` with their shared-token
 count and containment, so "lineage matched but content did not survive" is a
-reported diagnostic instead of silent recall inflation. Semantic matching
-(threshold 0.55 over the full token set including character bigrams) still
-handles faithful distillation of longer turns.
+reported diagnostic instead of silent recall inflation.
+
+**Semantic matching is faithful representation, not topical overlap (C7).**
+The semantic tier uses the same content-bearing vocabulary and requires one
+side's content tokens to be almost entirely contained in the other's
+(`SEMANTIC_CONTENT_THRESHOLD` = 0.8, either direction), with the same absolute
+floor of `min(2, |gold content tokens|)` shared tokens. Raw token overlap
+(stopwords + character bigrams, symmetric containment at 0.55) used to score
+two *distinct* same-topic evidence items at 0.56 — "…the park on 9 May 2023"
+vs "…the park on 7 May 2023" — and conflate them, which is one mechanism
+behind the legacy all-1.00 lifecycle recall. A distilled fact ("Caroline
+attended the LGBTQ support group") still matches its longer gold turn at 1.0
+by construction; a same-topic different-event sentence does not.
 
 ## 5. Evolution stage is measured, not assumed (C4)
 
