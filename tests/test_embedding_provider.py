@@ -17,8 +17,15 @@ def _always_fail(*args, **kwargs):
 
 
 class _Resp:
+    def __init__(self, status: int = 200, body: str = ""):
+        self.status_code = status
+        self.text = body
+
     def raise_for_status(self):
-        return None
+        if self.status_code >= 400:
+            import requests
+
+            raise requests.HTTPError(f"{self.status_code} Server Error", response=self)
 
     def json(self):
         return {"embedding": [3.0, 4.0]}
@@ -104,3 +111,47 @@ def test_cosine_rejects_mixed_dimensions():
 
     with pytest.raises(ValueError, match="different dimensions"):
         cosine([1.0] * 1024, [1.0] * 384)
+
+
+class _TooLong:
+    """Backend stub that rejects inputs longer than `limit` chars."""
+
+    def __init__(self, limit):
+        self.limit = limit
+        self.calls = 0
+
+    def __call__(self, *args, **kwargs):
+        self.calls += 1
+        text = kwargs["json"]["prompt"]
+        if len(text) > self.limit:
+            return _Resp(status=500, body='{"error":"the input length exceeds the context length"}')
+        return _Resp()
+
+
+def test_context_length_error_triggers_deterministic_truncation(monkeypatch):
+    provider = _provider(monkeypatch, EMBEDDING_RETRIES="3", EMBEDDING_RETRY_BACKOFF="0")
+    stub = _TooLong(limit=4000)
+    monkeypatch.setattr("memory_engine.vector.requests.post", stub)
+    long_text = "x" * 10000
+    vec = provider.embed(long_text)
+    assert len(vec) == 2  # normalized [3.0, 4.0] stub vector
+    # 10000 -> 5000 -> 2500 (fits at 4000): three posts, one per candidate length
+    assert stub.calls == 3
+
+
+def test_context_length_error_does_not_consume_retries(monkeypatch):
+    provider = _provider(monkeypatch, EMBEDDING_RETRIES="3", EMBEDDING_RETRY_BACKOFF="0")
+    stub = _TooLong(limit=10)
+    monkeypatch.setattr("memory_engine.vector.requests.post", stub)
+    with pytest.raises(EmbeddingUnavailableError, match="context window"):
+        provider.embed("y" * 100000)
+    # halving from 100000 down to MIN_EMBED_CHARS (512): log2(100000/512) ~ 8 steps
+    assert stub.calls <= 10
+
+
+def test_truncation_only_for_over_long_inputs(monkeypatch):
+    provider = _provider(monkeypatch)
+    stub = _TooLong(limit=4000)
+    monkeypatch.setattr("memory_engine.vector.requests.post", stub)
+    assert provider.embed("short text") == [0.6, 0.8]
+    assert stub.calls == 1  # no truncation round-trips for normal inputs

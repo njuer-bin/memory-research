@@ -21,18 +21,34 @@ class EmbeddingUnavailableError(RuntimeError):
     """
 
 
+class _ContextLengthExceeded(Exception):
+    """The backend rejected an input as longer than its context window.
+
+    Deterministic content property (e.g. a pasted paper excerpt whose dense
+    technical vocabulary tokenizes past bge-m3's 8192-token window); retrying
+    the same text cannot help, the input must be shortened.
+    """
+
+
+MIN_EMBED_CHARS = 512
+
+
 class EmbeddingProvider:
     """Ollama embedding backend with an explicit, non-silent failure policy.
 
     Modes:
-      - USE_OLLAMA_EMBEDDING=1 (default): real backend. A failing request is
-        retried (EMBEDDING_RETRIES, EMBEDDING_TIMEOUT, EMBEDDING_RETRY_BACKOFF).
+      - USE_OLLAMA_EMBEDDING=1 (default): real backend. A transiently failing
+        request is retried (EMBEDDING_RETRIES, EMBEDDING_TIMEOUT,
+        EMBEDDING_RETRY_BACKOFF). Inputs the backend rejects for exceeding its
+        context window are deterministically halved until they fit (logged).
         If it still fails, EmbeddingUnavailableError is raised UNLESS
         EMBEDDING_ALLOW_FALLBACK=1 explicitly opts into hash degradation.
       - USE_OLLAMA_EMBEDDING=0: offline mode; stable hash embeddings, no network.
 
     The historical default (silent hash fallback on any Ollama error) caused
     silent measurement contamination in the Phase 2 studies and was removed.
+    Truncation only ever affects retrieval-side embeddings; evidence matching
+    and attribution run on content, never on vector similarity.
     """
 
     def __init__(self, dim=384):
@@ -46,33 +62,60 @@ class EmbeddingProvider:
         self.backoff = float(os.getenv("EMBEDDING_RETRY_BACKOFF", "0.5"))
 
     def embed(self, text: str) -> list[float]:
-        if self.use_ollama:
-            last_error: Exception | None = None
-            for attempt in range(self.retries):
-                try:
-                    r = requests.post(
-                        self.url,
-                        json={"model": self.model, "prompt": text},
-                        timeout=self.timeout,
-                    )
-                    r.raise_for_status()
-                    vec = r.json().get("embedding")
-                    if vec:
-                        return self._normalize([float(x) for x in vec])
-                    last_error = EmbeddingUnavailableError(
-                        f"embedding response from {self.model!r} contained no vector"
-                    )
-                except Exception as exc:  # network / HTTP / decode failure
-                    last_error = exc
-                if attempt + 1 < self.retries and self.backoff > 0:
-                    time.sleep(self.backoff * (attempt + 1))
-            if self.allow_fallback:
-                return self._hash_embed(text)
-            raise EmbeddingUnavailableError(
-                f"embedding backend model={self.model!r} url={self.url} failed "
-                f"after {self.retries} attempt(s): {last_error}"
-            ) from last_error
-        return self._hash_embed(text)
+        if not self.use_ollama:
+            return self._hash_embed(text)
+        candidate = text
+        while True:
+            try:
+                return self._post_with_retries(candidate)
+            except _ContextLengthExceeded:
+                if len(candidate) <= MIN_EMBED_CHARS:
+                    raise EmbeddingUnavailableError(
+                        f"input still exceeds the context window of {self.model!r} "
+                        f"after truncating to {len(candidate)} chars"
+                    ) from None
+                candidate = candidate[: max(MIN_EMBED_CHARS, len(candidate) // 2)]
+                print(
+                    f"[embedding] input exceeds context window of {self.model!r}; "
+                    f"retrying with {len(candidate)} chars (truncated)",
+                    flush=True,
+                )
+            except EmbeddingUnavailableError:
+                if self.allow_fallback:
+                    return self._hash_embed(text)
+                raise
+
+    def _post_with_retries(self, text: str) -> list[float]:
+        last_error: Exception | None = None
+        for attempt in range(self.retries):
+            try:
+                return self._post_once(text)
+            except _ContextLengthExceeded:
+                raise  # content property: retrying the same text cannot help
+            except Exception as exc:  # network / HTTP / decode failure
+                last_error = exc
+            if attempt + 1 < self.retries and self.backoff > 0:
+                time.sleep(self.backoff * (attempt + 1))
+        raise EmbeddingUnavailableError(
+            f"embedding backend model={self.model!r} url={self.url} failed "
+            f"after {self.retries} attempt(s): {last_error}"
+        ) from last_error
+
+    def _post_once(self, text: str) -> list[float]:
+        r = requests.post(
+            self.url,
+            json={"model": self.model, "prompt": text},
+            timeout=self.timeout,
+        )
+        if r.status_code in (400, 500) and "context length" in (r.text or "").lower():
+            raise _ContextLengthExceeded(r.text[:200])
+        r.raise_for_status()
+        vec = r.json().get("embedding")
+        if vec:
+            return self._normalize([float(x) for x in vec])
+        raise EmbeddingUnavailableError(
+            f"embedding response from {self.model!r} contained no vector"
+        )
 
     def _hash_embed(self, text: str):
         v = [0.0] * self.dim
