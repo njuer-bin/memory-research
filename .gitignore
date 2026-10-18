@@ -7,9 +7,17 @@ venv/
 
 # Experiment runtime artifacts (regenerable, never commit)
 results/
-data/
+/data/
 *.db
 *.sqlite
+
+# Full benchmark datasets are NOT committed: redistribution terms must be
+# verified before public release (see datasets/manifest.json license notes).
+# Obtain the raw data from the original sources documented in the manifest;
+# the committed study subsets (datasets/data/*_n50.json*, longmemeval_s_sample10)
+# are small excerpts kept for study reproduction.
+datasets/data/locomo_refined_dataset/
+datasets/data/longmemeval_oracle.json
 
 # OS / editor
 .DS_Store

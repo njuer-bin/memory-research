@@ -47,8 +47,8 @@ def _iter_parquet(path:Path)->Iterator[dict[str,Any]]:
         if isinstance(row,dict):
             yield row
 
-def _locomo_conversations()->dict[str,dict[str,Any]]:
-    path=ROOT/"datasets/data/locomo_refined_dataset/public/conversations.jsonl"
+def _locomo_conversations(path_override:str|None=None)->dict[str,dict[str,Any]]:
+    path=ROOT/path_override if path_override else ROOT/"datasets/data/locomo_refined_dataset/public/conversations.jsonl"
     if not path.exists():
         return {}
     result={}
@@ -64,7 +64,7 @@ def iter_raw(dataset_id:str,*,limit:int|None=None)->Iterator[dict[str,Any]]:
     if info["format"]=="json":
         iterator=_iter_json(source)
     elif info["format"]=="jsonl":
-        iterator=_iter_jsonl(ROOT/"datasets/data/locomo_refined_dataset/public/questions.jsonl")
+        iterator=_iter_jsonl(source)
     elif info["format"]=="parquet":
         iterator=_iter_parquet(source)
     else:
@@ -78,11 +78,21 @@ def iter_normalized(dataset_id:str,*,limit:int|None=None)->Iterator[dict[str,Any
     from .adapters import normalize_locomo_refined, normalize_longmemeval
     from .normalize import normalize_record
     info=dataset_info(dataset_id)
-    conversations=_locomo_conversations() if dataset_id=="locomo_refined_public" else {}
+    if info.get("pre_normalized"):
+        # Study subsets built by experiments/build_study_set.py are stored as
+        # already-normalized records; pass them through unchanged.
+        for idx,raw in enumerate(iter_raw(dataset_id,limit=limit)):
+            yield raw
+        return
+    # Entries that declare a conversations file (LoCoMo family, including
+    # question-level study subsets) get their conversations joined at load
+    # time from the local full dataset.
+    join_conversations = dataset_id=="locomo_refined_public" or bool(info.get("conversations"))
+    conversations=_locomo_conversations(info.get("conversations")) if join_conversations else {}
     for idx,raw in enumerate(iter_raw(dataset_id,limit=limit)):
-        if dataset_id in {"longmemeval_s_sample10", "longmemeval_oracle", "longmemeval_oracle_n50"}:
+        if dataset_id in {"longmemeval_s_sample10", "longmemeval_oracle"}:
             yield normalize_longmemeval(raw, dataset=dataset_id, index=idx)
-        elif dataset_id=="locomo_refined_public":
+        elif join_conversations:
             cid = str(raw.get("sample_id") or raw.get("conversation_id") or "")
             conversation = conversations.get(cid)
             if conversation is None and raw.get("conversation_idx") is not None:

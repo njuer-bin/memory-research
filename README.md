@@ -50,4 +50,15 @@ provenance 内容校验、F3 定义、oracle 三条件、R1/R2 窄规则）。�
 
 ## 数据
 
-基准数据位于 `datasets/data/`（LongMemEval、LoCoMo-Refined 公开样本）。公开发布前需核对各基准的再分发许可，见 `datasets/manifest.json` 的 license_note。
+完整基准数据集**不进入本公开仓库**（再分发条款待核对，见 `datasets/manifest.json`
+各条目的 `provenance` / `license_note`）。仓库中只提交小规模研究摘录：
+
+- `datasets/data/longmemeval_s_sample10.json` — LongMemEval-s 10 条摘录（Study 2A）
+- `datasets/data/longmemeval_oracle_n50.json` — LongMemEval oracle 50 条分层研究集（Study 2B）
+- `datasets/data/locomo_n50.jsonl` — LoCoMo-Refined 50 问研究集（仅问题/证据，对话在加载时从本地全量数据 join）
+
+复现完整研究需自行获取原始数据并按 manifest 的 `provenance` 放置到
+`datasets/data/` 下；研究集本身可由脚本以固定种子重建：
+
+    python -m experiments.build_study_set --dataset longmemeval_oracle --n 50 --seed 20261018 --out longmemeval_oracle_n50 --primary question_type
+    python -m experiments.build_study_set --dataset locomo_refined_public --n 50 --seed 20261018 --out locomo_n50 --raw

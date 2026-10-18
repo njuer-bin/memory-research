@@ -10,26 +10,66 @@
       "source": "datasets/data/locomo_refined_dataset/public/questions.jsonl",
       "conversations": "datasets/data/locomo_refined_dataset/public/conversations.jsonl",
       "format": "jsonl",
-      "files": ["conversations.jsonl", "questions.jsonl"],
-      "size_hint": {"conversations": 10, "questions": 1382},
-      "capabilities": ["multi_hop", "temporal", "entity_attribution", "abstention", "evidence_coverage"],
-      "status": "ready",
-      "license_note": "Verify LoCoMo-Refined redistribution terms before public release of this repository."
+      "files": [
+        "conversations.jsonl",
+        "questions.jsonl"
+      ],
+      "size_hint": {
+        "conversations": 10,
+        "questions": 1382
+      },
+      "capabilities": [
+        "multi_hop",
+        "temporal",
+        "entity_attribution",
+        "abstention",
+        "evidence_coverage"
+      ],
+      "status": "local_only",
+      "provenance": "LoCoMo-Refined (refined derivative of LoCoMo, 'Evaluating Very Long-Term Conversational Memory', Wu et al. 2024). NOT committed to this public repository; obtain from the original source and place under datasets/data/locomo_refined_dataset/.",
+      "license_note": "Verify LoCoMo-Refined redistribution terms before any public release of this data."
     },
     {
       "id": "longmemeval_s_sample10",
       "family": "LongMemEval",
       "source": "datasets/data/longmemeval_s_sample10.json",
       "format": "json",
-      "capabilities": ["single_hop", "multi_hop", "temporal", "knowledge_update", "conflict", "abstention"],
-      "status": "ready"
+      "capabilities": [
+        "single_hop",
+        "multi_hop",
+        "temporal",
+        "knowledge_update",
+        "conflict",
+        "abstention"
+      ],
+      "status": "ready",
+      "provenance": "10-record excerpt of LongMemEval-s (Wu et al. 2024, 'LongMemEval'), kept as a small reproduction excerpt; full dataset available from the original release.",
+      "license_note": "Excerpt committed for study reproduction under the benchmark's research terms; verify before redistribution."
     },
     {
       "id": "longmemeval_oracle",
       "family": "LongMemEval",
       "source": "datasets/data/longmemeval_oracle.json",
       "format": "json",
-      "capabilities": ["oracle_memory", "evidence_diagnostics", "multi_hop", "temporal"],
+      "capabilities": [
+        "oracle_memory",
+        "evidence_diagnostics",
+        "multi_hop",
+        "temporal"
+      ],
+      "status": "local_only",
+      "provenance": "500-record filtered LongMemEval oracle slice. NOT committed to this public repository; obtain from the original LongMemEval release and rebuild the study subset with experiments/build_study_set.py.",
+      "license_note": "Verify LongMemEval redistribution terms before any public release of this data."
+    },
+    {
+      "id": "sample_conversation",
+      "family": "local_sample",
+      "source": "datasets/data/sample_conversation.json",
+      "format": "json",
+      "capabilities": [
+        "smoke_test",
+        "schema_validation"
+      ],
       "status": "ready"
     },
     {
@@ -37,30 +77,141 @@
       "family": "LongMemEval",
       "source": "datasets/data/longmemeval_oracle_n50.json",
       "format": "json",
-      "capabilities": ["oracle_memory", "evidence_diagnostics", "multi_hop", "temporal"],
+      "pre_normalized": true,
+      "capabilities": [
+        "study_subset"
+      ],
       "status": "ready",
       "sampling": {
-        "method": "stratified proportional sample by question_type",
+        "method": "stratified proportional sample; primary stratum question type (records each carry their own haystack, so conversation grouping is not meaningful); seeded random selection within stratum",
+        "source_dataset": "longmemeval_oracle",
+        "population": 500,
         "n": 50,
         "seed": 20261018,
-        "source_dataset": "longmemeval_oracle",
-        "allocation": {
-          "temporal-reasoning": 13,
-          "multi-session": 13,
+        "primary_stratum": "question_type",
+        "group_allocation": {
           "knowledge-update": 8,
-          "single-session-user": 7,
+          "multi-session": 13,
           "single-session-assistant": 6,
-          "single-session-preference": 3
+          "single-session-preference": 3,
+          "single-session-user": 7,
+          "temporal-reasoning": 13
+        },
+        "strata": {
+          "knowledge-update": {
+            "_total": 8
+          },
+          "multi-session": {
+            "_total": 13
+          },
+          "single-session-assistant": {
+            "_total": 6
+          },
+          "single-session-preference": {
+            "_total": 3
+          },
+          "single-session-user": {
+            "_total": 7
+          },
+          "temporal-reasoning": {
+            "_total": 13
+          }
         }
       }
     },
     {
-      "id": "sample_conversation",
-      "family": "local_sample",
-      "source": "datasets/data/sample_conversation.json",
-      "format": "json",
-      "capabilities": ["smoke_test", "schema_validation"],
-      "status": "ready"
+      "id": "locomo_n50",
+      "family": "LoCoMo-Refined",
+      "status": "ready",
+      "capabilities": [
+        "study_subset"
+      ],
+      "sampling": {
+        "method": "stratified proportional sample; primary stratum conversation, secondary stratum question/task type; largest-remainder allocation with a minimum of one question per type present in a conversation when the allocation allows",
+        "source_dataset": "locomo_refined_public",
+        "storage": "raw benchmark question records (conversations joined at load time)",
+        "population": 1382,
+        "n": 50,
+        "seed": 20261018,
+        "primary_stratum": "conversation",
+        "group_allocation": {
+          "conv-26": 5,
+          "conv-30": 3,
+          "conv-41": 5,
+          "conv-42": 6,
+          "conv-43": 6,
+          "conv-44": 4,
+          "conv-47": 5,
+          "conv-48": 6,
+          "conv-49": 5,
+          "conv-50": 5
+        },
+        "strata": {
+          "conv-26": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 2
+          },
+          "conv-30": {
+            "1": 1,
+            "2": 1,
+            "4": 1
+          },
+          "conv-41": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 2
+          },
+          "conv-42": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 3
+          },
+          "conv-43": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 3
+          },
+          "conv-44": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1
+          },
+          "conv-47": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 2
+          },
+          "conv-48": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 3
+          },
+          "conv-49": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 2
+          },
+          "conv-50": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 2
+          }
+        }
+      },
+      "source": "datasets/data/locomo_n50.jsonl",
+      "format": "jsonl",
+      "conversations": "datasets/data/locomo_refined_dataset/public/conversations.jsonl",
+      "provenance_note": "Question-level subset; full conversations are joined from the local LoCoMo-Refined copy at load time (verify redistribution terms before publishing derived data)."
     }
   ]
 }
