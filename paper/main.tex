@@ -128,25 +128,28 @@ rare and mostly control failures of the oracle conditions.
 % ---------------------------------------------------------------------------
 \section{Related Work}
 
-\paragraph{Long-term memory benchmarks.} LongMemEval \todo{cite} evaluates
+\paragraph{Long-term memory benchmarks.} LongMemEval \cite{longmemeval} evaluates
 chat assistants over long histories with question types that stress
 extraction, temporal reasoning, and knowledge updates; LoCoMo
-\todo{cite} evaluates very long multi-session conversations. We use both as
+\cite{locomo} evaluates very long multi-session conversations. We use both as
 evidence-boundary substrates and treat their gold evidence spans as the
 lifecycle signal.
 
 \paragraph{Memory architectures.} RAG-style stores, consolidation and
-reflection pipelines \todo{cite} optimize recall or answer accuracy. Our
+reflection pipelines \cite{generative-agents,memgpt,reflexion} optimize recall
+or answer accuracy. Our
 contribution is orthogonal: an attribution instrument that runs on a
 concrete open implementation, so the protocol's claims are checkable.
 
 \paragraph{Failure analysis and attribution.} Error taxonomies for agents
-and RAG failure analyses \todo{cite} typically require human trace reading.
+and RAG failure analyses \cite{retrieval-augmented-generation,survey-memory-agents} typically
+require human trace reading.
 Our protocol automates the lifecycle attribution while keeping the human in
 the loop for judge reliability (\S\ref{sec:results}).
 
 \paragraph{Evaluation methodology.} LLM-as-judge and semantic evaluation
-\todo{cite}; judge reliability and self-preference bias \todo{cite}. We
+\cite{llm-as-judge,g-eval}; judge reliability and self-preference bias
+\cite{kadavath-metamemory}. We
 measure inter-judge agreement explicitly (Cohen's $\kappa$) and keep the
 judge model separate from the answer model in the cross-model design.
 
@@ -258,14 +261,76 @@ re-run)}. Calibration-period false negatives (e47becba, 58bf7951) are
 explained by the formation boundary.
 
 \paragraph{Study 2B (primary, n=50).}
-\todo{Fill from results/study2b\_longmemeval\_oracle\_n50/summary.json:
-semantic accuracy per condition; stage recall chain; failure distribution;
-exact McNemar b/c/p; paired bootstrap CI; per-question-type table.}
-Preliminary (pre-fix run): real 58.3\% vs oracle memory 72.9\% vs oracle
-context 70.2\% semantic accuracy; stage recall formation 0.24, storage 1.0,
-evolution 0.24, retrieval 1.0, rerank 0.99, context 0.69; failure
-distribution dominated by \fone{} (14), \ezero{} (6), \evaluncertain{} (1),
-zero \fsix{} candidates.
+Table~\ref{tab:2b} reports the strict-mode rerun (post-C8 fix; embedding
+backend verified clean: 119 databases, 7{,}000 vectors, all 1024-dim).
+Semantic accuracy (uncertain verdicts excluded from the denominator) is
+66.0\% for Real Memory (31/47), 83.3\% for Oracle Memory (40/48), and
+75.0\% for Oracle Context (36/48). Real Memory loses gold evidence at the
+\emph{formation} boundary in 45/50 cases (90\%): formation recall 0.236 and
+evolution recall 0.236, against storage 1.0, retrieval 1.0, rerank 0.987,
+and context 0.695. Oracle Memory restores every pre-context stage to 1.0
+and reaches 0.979 context recall; its remaining three failures are
+context-assembly, not formation. The E0 gate finds 40/50 benchmark items
+carry sufficient evidence, 8 insufficient (reported as \ezero{}, not as
+memory failures), and 2 uncertain (excluded). Among attributable answer
+failures, \fone{} dominates (9), followed by \ezero{} (7) and
+\evaluncertain{} (3); zero \fsix{} candidates occur, because gold evidence
+never survives formation.
+
+Real versus Oracle Memory is significant: exact McNemar on discordant
+pairs $b{=}10$, $c{=}2$, $p{=}0.0386$; paired bootstrap (10{,}000 resamples)
+95\% CI on the accuracy difference $[+0.043, +0.319]$. Real versus Oracle
+Context is marginal ($b{=}6$, $c{=}1$, $p{=}0.1250$, CI $[+0.000, +0.217]$),
+consistent with H2: repairing evidence availability (Oracle Memory) closes
+most of the gap, while bypassing the pipeline (Oracle Context) closes less.
+Per question type (Table~\ref{tab:2b-type}), the formation dominance is
+broadest on multi-session and temporal-reasoning items (4 \fone{} each)
+and weakest on single-session-user/assistant items (1.0 accuracy in all
+conditions). The pre-fix run (real 58.3\%, oracle memory 72.9\%, oracle
+context 70.2\%) is retained in the artifact as an audit reference only.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lccc}
+\hline
+ & \textbf{Real} & \textbf{Oracle Memory} & \textbf{Oracle Context} \\
+\hline
+Semantic accuracy & 31/47 = 66.0\% & 40/48 = 83.3\% & 36/48 = 75.0\% \\
+(uncertain excluded) & & & \\
+Lexical accuracy (report only) & 19/50 = 38.0\% & 22/50 = 44.0\% & 25/50 = 50.0\% \\
+Formation recall & 0.236 & 1.000 & n/a \\
+Storage recall & 1.000 & 1.000 & n/a \\
+Evolution recall & 0.236 & 1.000 & n/a \\
+Retrieval recall & 1.000 & 1.000 & n/a \\
+Rerank recall & 0.987 & 1.000 & n/a \\
+Context recall & 0.695 & 0.979 & 1.000 \\
+First loss = \fone{} & 45/50 & 0/50 & n/a \\
+\hline
+\end{tabular}
+\caption{Study 2B (LongMemEval oracle subset, $n{=}50$). Semantic accuracy
+excludes uncertain verdicts from the denominator; lexical accuracy is
+reported for reference only and is never an attribution input.}
+\label{tab:2b}
+\end{table}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lccccc}
+\hline
+\textbf{Question type} & $n$ & \textbf{Real} & \textbf{Oc.\ Mem.} & \textbf{Oc.\ Ctx.} & \textbf{Attributed failures} \\
+\hline
+single-session-user & 7 & 1.000 & 1.000 & 1.000 & \evaluncertain{}$\times$1 \\
+single-session-assistant & 6 & 1.000 & 1.000 & 1.000 & --- \\
+single-session-preference & 3 & 0.667 & 0.667 & 0.667 & \ezero{}$\times$1 \\
+knowledge-update & 8 & 0.750 & 0.875 & 0.875 & \fone{}$\times$1, \ezero{}$\times$1 \\
+multi-session & 13 & 0.455 & 0.636 & 0.545 & \fone{}$\times$4, \ezero{}$\times$2, \evaluncertain{}$\times$2 \\
+temporal-reasoning & 13 & 0.462 & 0.846 & 0.615 & \fone{}$\times$4, \ezero{}$\times$3 \\
+\hline
+\end{tabular}
+\caption{Study 2B semantic accuracy by question type. Formation failures
+concentrate in multi-session and temporal-reasoning items.}
+\label{tab:2b-type}
+\end{table}
 
 \paragraph{Study 2C (cross-benchmark, LoCoMo n=50).}
 \todo{Fill: same tables; per-category breakdown; compare boundary
