@@ -8,6 +8,12 @@ The calibration layer separates:
 - EVAL_SEMANTIC_UNCERTAIN: the evaluator cannot support a stable attribution
 
 It does not rerun memory ingestion or answer generation.
+
+v2 notes:
+- Uses the unified attribution protocol (evaluation.attribution) and the
+  benchmark-answer-based E0 gate (evaluation.gate).
+- Runner v2 already stores per-mode semantic verdicts and the gate in
+  comparison.jsonl; use --force to re-judge (e.g. after a judge-model change).
 """
 from __future__ import annotations
 
@@ -17,6 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from evaluation.answer_semantic_eval import evaluate_answer
+from evaluation.attribution import attribute_failure
+from evaluation.gate import evaluate_evidence_gate
 
 
 MODES = ("real_memory", "oracle_memory", "oracle_context")
@@ -33,29 +41,23 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def judge_context(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Gold evidence for the judge with metadata preserved.
+
+    Timestamps resolve relative temporal expressions (yesterday, last week)
+    in the judge prompt; dropping them makes the calibration gate disagree
+    with the runner's gate on the same evidence.
+    """
     return [
         {
             "id": str(e.get("evidence_id") or ""),
-            "content": str(e.get("text") or ""),
+            "content": str(e.get("text") or e.get("content") or ""),
+            "source_id": e.get("source_id"),
+            "turn_id": e.get("turn_id"),
+            "timestamp": e.get("timestamp"),
         }
         for e in row.get("gold_evidence", [])
-        if e.get("text")
+        if (e.get("text") or e.get("content"))
     ]
-
-
-def first_missing_stage(real: dict[str, Any], gold_ids: set[str]) -> str | None:
-    for stage, label in (
-        ("formation", "F1_FORMATION"),
-        ("storage", "F2_STORAGE"),
-        ("evolution", "F3_EVOLUTION"),
-        ("retrieval", "F4_RETRIEVAL"),
-        ("rerank", "F4_RETRIEVAL"),
-        ("context", "F5_CONTEXT"),
-    ):
-        found = {str(x) for x in (real.get(stage) or {}).get("found", [])}
-        if not gold_ids.issubset(found):
-            return label
-    return None
 
 
 def main() -> None:
@@ -69,7 +71,13 @@ def main() -> None:
         "--summary",
         default="results/oracle_experiments/semantic_summary.json",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-judge even when runner v2 already stored a semantic verdict.",
+    )
     args = parser.parse_args()
+    force = args.force
 
     rows = load_rows(Path(args.input))
     output = Path(args.output)
@@ -95,6 +103,14 @@ def main() -> None:
             for mode in MODES:
                 answer = new_row["modes"][mode].get("answer") or {}
                 candidate = str(answer.get("answer") or "")
+                if not force and answer.get("semantic_correct") is not None:
+                    counts[mode]["scored"] += 1
+                    if answer["semantic_correct"]:
+                        counts[mode]["correct"] += 1
+                    else:
+                        counts[mode]["incorrect"] += 1
+                    new_row["modes"][mode]["answer"] = answer
+                    continue
                 try:
                     verdict = evaluate_answer(question, candidate, evidence)
                     answer.update(
@@ -126,30 +142,21 @@ def main() -> None:
 
             real = new_row["modes"]["real_memory"]
             answer = real["answer"]
-            semantic_correct = answer.get("semantic_correct")
-            evidence_sufficient = answer.get("semantic_evidence_sufficient")
-            confidence = answer.get("semantic_confidence")
-
-            if semantic_correct is True:
-                failure = None
-            elif semantic_correct is None:
-                failure = "EVAL_SEMANTIC_UNCERTAIN"
-            elif evidence_sufficient is False:
-                failure = "E0_EVIDENCE_INSUFFICIENT"
-            elif confidence == "low":
-                failure = "EVAL_SEMANTIC_UNCERTAIN"
-            else:
-                gold_ids = {
-                    str(e.get("evidence_id"))
-                    for e in new_row.get("gold_evidence", [])
-                    if e.get("evidence_id")
-                }
-                if not gold_ids:
-                    failure = "E0_EVIDENCE_INSUFFICIENT"
-                else:
-                    failure = first_missing_stage(real, gold_ids)
-                    if failure is None:
-                        failure = "F6_REASONING_CANDIDATE"
+            # E0 gate: prefer the benchmark-answer-based gate stored by the
+            # runner; reconstruct it for legacy rows. Never judge the model
+            # prediction here -- that would make E0 circular.
+            gate = real.get("evidence_sufficiency")
+            if not (isinstance(gate, dict) and gate.get("status")):
+                gate = evaluate_evidence_gate(
+                    question, str(row.get("gold_answer") or ""), evidence
+                )
+                real["evidence_sufficiency"] = gate
+            failure = attribute_failure(
+                real,
+                semantic_correct=answer.get("semantic_correct"),
+                gate=gate,
+                gold_evidence=new_row.get("gold_evidence", []),
+            )
 
             real["semantic_answer_failure_type"] = failure
             if failure:

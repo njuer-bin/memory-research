@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any
 
 from datasets.loader import iter_normalized
+from evaluation.attribution import earliest_failed_stage
 from memory_engine.engine import MemoryEngine
 from memory_engine.models import AddMessage, AddRequest, SearchRequest
 from tracing.dataset_trace import record_to_trace
-from tracing.failure_attribution import attribute_failure
 from tracing.engine_trace import artifacts_from_store, retrieval_artifacts, stage_match
 
 
@@ -106,7 +106,10 @@ def run_record(engine: MemoryEngine, record: dict[str, Any], user_id: str) -> di
     trace.rerank = trace.retrieval
     trace.context = trace.retrieval
     trace.answer = {"correct": None, "answer": None, "mode": "search-only-diagnostic"}
-    trace.failure_type = attribute_failure(trace.to_dict())
+    # This probe generates no answer, so it reports lifecycle recall only.
+    # The answer-level label (F6/E0/EVAL) is owned by the semantic protocol
+    # in evaluation.attribution and requires a judged model answer.
+    trace.failure_type = earliest_failed_stage(trace.to_dict(), gold)
     return trace.to_dict()
 
 def run(dataset: str, limit: int) -> list[dict[str, Any]]:

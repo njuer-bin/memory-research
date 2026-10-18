@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 import traceback
 import uuid
@@ -12,12 +13,13 @@ from typing import Any
 from datasets.loader import iter_normalized
 from evaluation.answer_generation import generate_and_score
 from evaluation.answer_semantic_eval import evaluate_answer
+from evaluation.gate import evaluate_evidence_gate
 from evaluation.lifecycle_metrics import STAGES, summarize_traces
 from memory_engine.engine import MemoryEngine
 from memory_engine.models import AddMessage, AddRequest, SearchRequest
 from tracing.dataset_trace import record_to_trace
 from tracing.engine_trace import artifacts_from_store, retrieval_artifacts, stage_match
-from tracing.failure_attribution import attribute_failure
+from evaluation.attribution import attribute_failure, control_failure_label
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "results" / "oracle_experiments"
@@ -208,63 +210,68 @@ def _oracle_context_trace(gold: list[dict[str, Any]], oracle: list[dict[str, Any
 def _evidence_sufficiency(question: str, benchmark_answer: str, gold: list[dict[str, Any]]) -> dict[str, Any]:
     """Validate the benchmark Gold Evidence against the benchmark answer.
 
-    The gate must be independent of the Real Memory prediction. Using the model's
-    failed answer here would make E0 depend on the very system failure we are trying
-    to attribute. The benchmark reference answer is therefore the candidate used by
-    the semantic evidence-coverage judge.
+    Delegates to the shared E0 gate (evaluation.gate). The gate is independent
+    of the Real Memory prediction: using the model's failed answer here would
+    make E0 depend on the very system failure we are trying to attribute.
     """
-    if not gold:
-        return {
-            "status": "insufficient", "evidence_sufficient": False,
-            "confidence": "high", "reason": "No benchmark gold evidence is available.",
-            "adjudication": "no_gold_evidence",
+    return evaluate_evidence_gate(question, benchmark_answer, gold)
+
+
+def _judge_evidence(gold: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize gold evidence for the semantic judge, preserving metadata.
+
+    Source/turn/timestamp metadata is part of the evidence: the judge prompt
+    uses timestamps to resolve relative temporal expressions (yesterday, last
+    week, ...). Note that ``evaluate_answer`` reads the ``content`` key, while
+    lifecycle traces carry ``text``; passing trace items directly used to send
+    an *empty* evidence block to the judge (see docs/AUDIT-2026-10-18.md).
+    """
+    return [
+        {
+            "id": str(e.get("evidence_id") or ""),
+            "content": str(e.get("text") or e.get("content") or ""),
+            "source_id": e.get("source_id") or e.get("source"),
+            "turn_id": e.get("turn_id") or e.get("turn"),
+            "timestamp": e.get("timestamp"),
         }
+        for e in gold
+        if (e.get("text") or e.get("content"))
+    ]
+
+
+def _semantic_verdict(question: str, answer_text: str, judge_gold: list[dict[str, Any]]) -> dict[str, Any]:
+    """Judge the *model answer* semantically (distinct from the E0 gate).
+
+    The E0 gate judges the benchmark reference answer; this judges the model's
+    own prediction. Only this verdict may feed F6 attribution.
+    """
+    if not answer_text:
+        return {"semantic_correct": None, "semantic_error": "empty_answer"}
     try:
-        verdict = evaluate_answer(question, str(benchmark_answer or ""), gold)
+        verdict = evaluate_answer(question, answer_text, judge_gold)
     except Exception as exc:
-        return {
-            "status": "error", "evidence_sufficient": None, "confidence": "low",
-            "reason": f"Evidence sufficiency judge failed: {type(exc).__name__}: {exc}",
-            "adjudication": "semantic_judge_error",
-        }
-    sufficient = verdict.get("evidence_sufficient")
-    confidence = str(verdict.get("confidence") or "medium").lower()
-    if sufficient is False:
-        status = "insufficient"
-    elif sufficient is True and confidence != "low":
-        status = "sufficient"
-    else:
-        status = "uncertain"
+        return {"semantic_correct": None, "semantic_error": f"{type(exc).__name__}: {exc}"}
     return {
-        "status": status,
-        "evidence_sufficient": sufficient,
-        "confidence": confidence,
-        "reason": verdict.get("reason", ""),
-        "adjudication": verdict.get("adjudication", "judge"),
-        "adjudication_anchor": verdict.get("adjudication_anchor"),
-        "model": verdict.get("model"),
+        "semantic_correct": verdict["correct"],
+        "semantic_judge_correct": verdict["judge_correct"],
+        "semantic_evidence_sufficient": verdict["evidence_sufficient"],
+        "semantic_confidence": verdict["confidence"],
+        "semantic_reason": verdict["reason"],
+        "semantic_adjudication": verdict["adjudication"],
+        "semantic_adjudication_anchor": verdict["adjudication_anchor"],
+        "semantic_judge_model": verdict["model"],
     }
 
 
-def _answer_failure_type(mode_data: dict[str, Any]) -> str | None:
-    answer = mode_data.get("answer") or {}
-    if answer.get("correct") is not False:
+def _commit_hash() -> str | None:
+    try:
+        import subprocess
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=10
+        )
+        return out.stdout.strip() or None
+    except Exception:
         return None
-    sufficiency = mode_data.get("evidence_sufficiency") or {}
-    if sufficiency.get("status") == "insufficient":
-        return "E0_EVIDENCE_INSUFFICIENCY"
-    if sufficiency and sufficiency.get("status") != "sufficient":
-        return "EVAL_EVIDENCE_SUFFICIENCY"
-    if mode_data.get("mode") == "oracle_context":
-        return "RC_REASONING_CONTROL_FAILURE"
-    gold = {str(x.get("evidence_id")) for x in mode_data.get("gold_evidence", []) if x.get("evidence_id")}
-    if not gold:
-        return "E0_EVIDENCE_INSUFFICIENCY"
-    for stage, failure in (("formation", "F1_FORMATION"), ("storage", "F2_STORAGE"), ("evolution", "F3_EVOLUTION"), ("retrieval", "F4_RETRIEVAL"), ("rerank", "F4_RETRIEVAL"), ("context", "F5_CONTEXT")):
-        found = {str(x) for x in (mode_data.get(stage) or {}).get("found", [])}
-        if not gold.issubset(found):
-            return failure
-    return "F6_REASONING"
 
 
 def _score_mode_answer(question: str, reference: str, context: list[dict[str, Any]]) -> dict[str, Any]:
@@ -275,14 +282,30 @@ def _score_mode_answer(question: str, reference: str, context: list[dict[str, An
 
 
 def _answer_summary(rows: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    """Report lexical and semantic accuracy side by side.
+
+    Lexical metrics are kept for reproducibility only; attribution uses the
+    semantic verdict (see evaluation/attribution.py).
+    """
     answers = [(r.get("modes", {}).get(mode, {}).get("answer") or {}) for r in rows]
     scored = [a for a in answers if a.get("correct") is not None]
-    correct = sum(1 for a in scored if a.get("correct") is True)
+    lex_correct = sum(1 for a in scored if a.get("correct") is True)
+    sem = [a for a in answers if a.get("semantic_correct") is not None]
+    sem_correct = sum(1 for a in sem if a.get("semantic_correct") is True)
     return {
-        "count": len(answers), "scored": len(scored), "correct": correct,
-        "accuracy": correct / len(scored) if scored else None,
-        "exact_match": sum(float(a.get("exact_match", 0.0)) for a in scored) / len(scored) if scored else None,
-        "token_f1": sum(float(a.get("token_f1", 0.0)) for a in scored) / len(scored) if scored else None,
+        "count": len(answers),
+        "lexical": {
+            "scored": len(scored),
+            "correct": lex_correct,
+            "accuracy": lex_correct / len(scored) if scored else None,
+            "exact_match": sum(float(a.get("exact_match", 0.0)) for a in scored) / len(scored) if scored else None,
+            "token_f1": sum(float(a.get("token_f1", 0.0)) for a in scored) / len(scored) if scored else None,
+        },
+        "semantic": {
+            "scored": len(sem),
+            "correct": sem_correct,
+            "accuracy": sem_correct / len(sem) if sem else None,
+        },
         "model_errors": sum(1 for a in answers if a.get("model_error")),
     }
 
@@ -313,39 +336,58 @@ def run_record(record: dict[str, Any], idx: int) -> dict[str, Any]:
     _real_trace_stages(trace, gold, engine, user_id, real, engine.last_search_trace)
     search_trace = engine.last_search_trace
     real_context = search_trace.get("context") or real
+    judge_gold = _judge_evidence(gold)
+
     real_answer = _score_mode_answer(record["question"], record.get("answer", ""), real_context)
     oracle_memory_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle)
     oracle_context_answer = _score_mode_answer(record["question"], record.get("answer", ""), oracle)
+    for ans in (real_answer, oracle_memory_answer, oracle_context_answer):
+        ans.update(_semantic_verdict(record["question"], ans.get("answer") or "", judge_gold))
 
-    gate = _evidence_sufficiency(record["question"], record.get("answer", ""), gold)
-    trace.answer = {**real_answer, "mode": "real_memory", "answer_scoring": "token_f1_plus_temporal_phrase_rules"}
-    trace.failure_type = attribute_failure({**trace.to_dict(), "evidence_sufficiency": gate})
+    gate = _evidence_sufficiency(record["question"], record.get("answer", ""), judge_gold)
 
     real_mode = {
         "formation": trace.formation.to_dict(), "storage": trace.storage.to_dict(),
         "evolution": trace.evolution.to_dict(), "retrieval": trace.retrieval.to_dict(),
         "rerank": trace.rerank.to_dict(), "context": trace.context.to_dict(),
-        "failure_type": trace.failure_type, "answer": real_answer,
+        "answer": {**real_answer, "mode": "real_memory"},
         "evidence_sufficiency": gate,
     }
+    real_mode["answer_failure_type"] = attribute_failure(
+        {"gold_evidence": gold, **real_mode},
+        semantic_correct=real_answer.get("semantic_correct"),
+        gate=gate,
+        gold_evidence=gold,
+    )
+
     oracle_memory = _oracle_memory_trace(gold, oracle)
     oracle_memory.update({
-        "answer": {**oracle_memory_answer, "mode": "oracle_memory", "answer_scoring": "token_f1_plus_temporal_phrase_rules"},
+        "answer": {**oracle_memory_answer, "mode": "oracle_memory"},
         "evidence_sufficiency": gate,
     })
+    oracle_memory["answer_failure_type"] = attribute_failure(
+        {"gold_evidence": gold, **oracle_memory},
+        semantic_correct=oracle_memory_answer.get("semantic_correct"),
+        gate=gate,
+        gold_evidence=gold,
+    )
+
     oracle_context = _oracle_context_trace(gold, oracle)
     oracle_context.update({
-        "answer": {**oracle_context_answer, "mode": "oracle_context", "answer_scoring": "token_f1_plus_temporal_phrase_rules"},
+        "answer": {**oracle_context_answer, "mode": "oracle_context"},
         "evidence_sufficiency": gate,
     })
+    oracle_context["answer_failure_type"] = control_failure_label(
+        "oracle_context", semantically_wrong=oracle_context_answer.get("semantic_correct") is False
+    )
 
     row = {
         "question_id": trace.question_id, "question": trace.question,
+        "gold_answer": record.get("answer"),
         "modes": {"real_memory": real_mode, "oracle_memory": oracle_memory, "oracle_context": oracle_context},
         "gold_evidence_count": len(gold), "gold_evidence": gold,
+        "code_commit": _commit_hash(),
     }
-    for mode in ("real_memory", "oracle_memory", "oracle_context"):
-        row["modes"][mode]["answer_failure_type"] = _answer_failure_type({"gold_evidence": gold, "mode": mode, **row["modes"][mode]})
     return row
 
 
@@ -389,20 +431,27 @@ def _build_summary(dataset: str, limit: int, rows: list[dict[str, Any]], errors:
         "oracle_context": _context_only_summary(rows),
         "evidence_sufficiency": {"status_distribution": gate_counts, "gate": "E0 before F1-F6; uncertain/error cases are EVAL"},
         "answer_scoring": {
-            "method": "local_ollama_token_f1_plus_temporal_phrase_rules",
+            "method": "lexical (EM/token-F1, reported only) + semantic judge (attribution input)",
+            "lexical_note": "Lexical correctness is NOT an attribution input; it produces false negatives on concise correct answers.",
             "real_memory": _answer_summary(rows, "real_memory"),
             "oracle_memory": _answer_summary(rows, "oracle_memory"),
             "oracle_context": _answer_summary(rows, "oracle_context"),
             "first_answer_failure_distribution": _first_answer_failure_distribution(rows),
+        },
+        "models": {
+            "answer_model": os.getenv("ANSWER_MODEL", "qwen2.5:7b"),
+            "semantic_judge_model": os.getenv("SEMANTIC_JUDGE_MODEL", os.getenv("ANSWER_MODEL", "qwen2.5:7b")),
+            "code_commit": _commit_hash(),
         },
         "note": (
             "Evidence lifecycle and answer scoring are reported separately. "
             "Before F1-F6 attribution, Gold Evidence is checked for question-answer sufficiency "
             "using the benchmark reference answer rather than the Real Memory prediction. "
             "Insufficient evidence is E0; uncertain or judge-error cases are EVAL. "
-            "F6 is assigned only when the gate is sufficient, all gold evidence reaches final context, "
-            "and the benchmark answer scorer still marks the answer incorrect. Oracle Context remains "
-            "a reasoning control and its own wrong answer is RC_REASONING_CONTROL_FAILURE."
+            "F6_REASONING_CANDIDATE is assigned only when the gate is sufficient, all gold evidence "
+            "reaches final context, and the SEMANTIC evaluator (not the lexical scorer) marks the "
+            "model answer incorrect. Oracle Context remains a reasoning control and its own wrong "
+            "answer is RC_REASONING_CONTROL_FAILURE."
         ),
     }
 
