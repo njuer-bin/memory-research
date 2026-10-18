@@ -549,48 +549,112 @@ def _build_summary(dataset: str, limit: int, rows: list[dict[str, Any]], errors:
     }
 
 
-def run(dataset: str, limit: int, out_dir: Path | None = None) -> dict[str, Any]:
+def _warmup_embedder() -> None:
+    """Fail fast when the embedding backend is unavailable.
+
+    With the strict embedding policy a single failed request raises instead of
+    silently degrading, so a dead backend would otherwise only surface minutes
+    into the first record. Warm up once and abort the whole run up front.
+    """
+    from memory_engine.vector import EmbeddingProvider
+
+    provider = EmbeddingProvider()
+    t0 = time.perf_counter()
+    vec = provider.embed("embedding backend warmup probe")
+    log(f"[warmup] embedding backend OK: model={provider.model} dim={len(vec)} "
+        f"in {time.perf_counter() - t0:.2f}s")
+
+
+def _load_prior_results(jsonl: Path, progress_path: Path) -> tuple[dict[str, dict[str, Any]], set[str]]:
+    """Load existing rows and recorded error ids for an append/repair run."""
+    rows: dict[str, dict[str, Any]] = {}
+    error_ids: set[str] = set()
+    if jsonl.exists():
+        for line in jsonl.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                row = json.loads(line)
+                rows[str(row.get("question_id"))] = row  # last occurrence wins
+    if progress_path.exists():
+        try:
+            prior = json.loads(progress_path.read_text(encoding="utf-8"))
+            error_ids = {str(x) for x in (prior.get("error_ids") or [])}
+        except (ValueError, OSError):
+            error_ids = set()
+    return rows, error_ids
+
+
+def run(dataset: str, limit: int, out_dir: Path | None = None,
+        ids: str | None = None, append: bool = False) -> dict[str, Any]:
     out = out_dir or OUT
     out.mkdir(parents=True, exist_ok=True)
     jsonl = out / "comparison.jsonl"
     progress_path = out / "progress.json"
     summary_path = out / "summary.json"
-    jsonl.write_text("", encoding="utf-8")
-    rows: list[dict[str, Any]] = []
-    errors = 0
+
+    selected = {s.strip() for s in (ids or "").split(",") if s.strip()} or None
+    if selected is not None and not append:
+        raise ValueError("--ids requires --append (repair merges into an existing result directory)")
+
+    if append:
+        rows_by_id, error_ids = _load_prior_results(jsonl, progress_path)
+    else:
+        jsonl.write_text("", encoding="utf-8")
+        rows_by_id, error_ids = {}, set()
+
     started = time.perf_counter()
 
     log("=" * 72)
-    log(f"Oracle experiment started: dataset={dataset}, limit={limit}")
+    mode = "repair" if selected else ("append" if append else "fresh")
+    log(f"Oracle experiment started: dataset={dataset}, limit={limit}, mode={mode}"
+        + (f", ids={sorted(selected)}" if selected else ""))
     log(f"Output: {out}")
     log("=" * 72)
-    _write_progress(progress_path, {"status": "running", "dataset": dataset, "limit": limit, "completed": 0, "errors": 0, "elapsed_seconds": 0.0})
+    _warmup_embedder()
+    _write_progress(progress_path, {
+        "status": "running", "dataset": dataset, "limit": limit,
+        "completed": len(rows_by_id), "errors": len(error_ids),
+        "error_ids": sorted(error_ids), "elapsed_seconds": 0.0,
+    })
 
     for idx, record in enumerate(iter_normalized(dataset, limit=limit)):
+        qid = str(record.get("question_id"))
+        if selected is not None and qid not in selected:
+            continue
         number = idx + 1
-        log(f"\n[{number}/{limit}] START question_id={record.get('question_id')}")
+        log(f"\n[{number}/{limit}] START question_id={qid}")
         t0 = time.perf_counter()
         try:
             row = run_record(record, idx)
-            rows.append(row)
+            rows_by_id[qid] = row
+            error_ids.discard(qid)
             _write_jsonl(jsonl, row)
             failure = row["modes"]["real_memory"].get("answer_failure_type")
             log(f"[{number}/{limit}] DONE {time.perf_counter() - t0:.2f}s failure={failure}")
         except Exception as exc:
-            errors += 1
+            error_ids.add(qid)
             log(f"[{number}/{limit}] ERROR {type(exc).__name__}: {exc}")
             traceback.print_exc()
         _write_progress(progress_path, {
             "status": "running", "dataset": dataset, "limit": limit,
-            "completed": number, "errors": errors,
+            "completed": len(rows_by_id), "errors": len(error_ids),
+            "error_ids": sorted(error_ids),
             "elapsed_seconds": time.perf_counter() - started,
         })
 
-    summary = _build_summary(dataset, limit, rows, errors)
+    # Rewrite deduplicated: prior rows keep their order, re-run rows stay in
+    # place, genuinely new rows are appended. A crashed prior run may have
+    # left duplicates; the dict above collapses them (last occurrence wins).
+    merged = list(rows_by_id.values())
+    with jsonl.open("w", encoding="utf-8") as f:
+        for row in merged:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    summary = _build_summary(dataset, limit, merged, len(error_ids))
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     _write_progress(progress_path, {
         "status": "completed", "dataset": dataset, "limit": limit,
-        "completed": len(rows), "errors": errors,
+        "completed": len(merged), "errors": len(error_ids),
+        "error_ids": sorted(error_ids),
         "elapsed_seconds": time.perf_counter() - started,
     })
     print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -607,8 +671,21 @@ def main() -> None:
         help="Result directory (default: results/oracle_experiments). "
         "Use one directory per study so raw results stay separable.",
     )
+    parser.add_argument(
+        "--ids",
+        default=None,
+        help="Comma-separated question_ids to (re)run; requires --append. "
+        "Use this to repair individual failed records inside an existing result directory.",
+    )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Merge into an existing result directory instead of starting fresh; "
+        "existing rows for --ids are replaced and the summary is rebuilt.",
+    )
     args = parser.parse_args()
-    run(args.dataset, args.limit, Path(args.out) if args.out else None)
+    run(args.dataset, args.limit, Path(args.out) if args.out else None,
+        ids=args.ids, append=args.append)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import time
 from typing import Optional
 
 import requests
@@ -10,10 +11,28 @@ import requests
 from .store import tokenize
 
 
-class EmbeddingProvider:
+class EmbeddingUnavailableError(RuntimeError):
+    """The configured embedding backend could not serve a request.
+
+    Experiments must fail loudly instead of silently degrading to hash
+    embeddings: hash vectors are semantically random, so mixing them with
+    real vectors either crashes the vector index (dimension mismatch) or,
+    worse, silently corrupts retrieval scores without any visible error.
     """
-    优先使用 Ollama（可配置 OLLAMA_EMBEDDING_MODEL）。
-    Ollama 不可用时使用稳定 hash embedding，保证本地测试不依赖外部服务。
+
+
+class EmbeddingProvider:
+    """Ollama embedding backend with an explicit, non-silent failure policy.
+
+    Modes:
+      - USE_OLLAMA_EMBEDDING=1 (default): real backend. A failing request is
+        retried (EMBEDDING_RETRIES, EMBEDDING_TIMEOUT, EMBEDDING_RETRY_BACKOFF).
+        If it still fails, EmbeddingUnavailableError is raised UNLESS
+        EMBEDDING_ALLOW_FALLBACK=1 explicitly opts into hash degradation.
+      - USE_OLLAMA_EMBEDDING=0: offline mode; stable hash embeddings, no network.
+
+    The historical default (silent hash fallback on any Ollama error) caused
+    silent measurement contamination in the Phase 2 studies and was removed.
     """
 
     def __init__(self, dim=384):
@@ -21,21 +40,38 @@ class EmbeddingProvider:
         self.url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/embeddings")
         self.dim = dim
         self.use_ollama = os.getenv("USE_OLLAMA_EMBEDDING", "1") == "1"
+        self.allow_fallback = os.getenv("EMBEDDING_ALLOW_FALLBACK", "0") == "1"
+        self.retries = max(1, int(os.getenv("EMBEDDING_RETRIES", "3")))
+        self.timeout = float(os.getenv("EMBEDDING_TIMEOUT", "60"))
+        self.backoff = float(os.getenv("EMBEDDING_RETRY_BACKOFF", "0.5"))
 
     def embed(self, text: str) -> list[float]:
         if self.use_ollama:
-            try:
-                r = requests.post(
-                    self.url,
-                    json={"model": self.model, "prompt": text},
-                    timeout=15,
-                )
-                r.raise_for_status()
-                vec = r.json().get("embedding")
-                if vec:
-                    return self._normalize([float(x) for x in vec])
-            except Exception:
-                pass
+            last_error: Exception | None = None
+            for attempt in range(self.retries):
+                try:
+                    r = requests.post(
+                        self.url,
+                        json={"model": self.model, "prompt": text},
+                        timeout=self.timeout,
+                    )
+                    r.raise_for_status()
+                    vec = r.json().get("embedding")
+                    if vec:
+                        return self._normalize([float(x) for x in vec])
+                    last_error = EmbeddingUnavailableError(
+                        f"embedding response from {self.model!r} contained no vector"
+                    )
+                except Exception as exc:  # network / HTTP / decode failure
+                    last_error = exc
+                if attempt + 1 < self.retries and self.backoff > 0:
+                    time.sleep(self.backoff * (attempt + 1))
+            if self.allow_fallback:
+                return self._hash_embed(text)
+            raise EmbeddingUnavailableError(
+                f"embedding backend model={self.model!r} url={self.url} failed "
+                f"after {self.retries} attempt(s): {last_error}"
+            ) from last_error
         return self._hash_embed(text)
 
     def _hash_embed(self, text: str):
@@ -59,8 +95,12 @@ class EmbeddingProvider:
 def cosine(a,b):
     if not a or not b:
         return 0.0
-    n = min(len(a),len(b))
-    dot = sum(a[i]*b[i] for i in range(n))
-    na = math.sqrt(sum(x*x for x in a[:n]))
-    nb = math.sqrt(sum(x*x for x in b[:n]))
+    if len(a) != len(b):
+        raise ValueError(
+            f"cosine() received vectors of different dimensions ({len(a)} vs {len(b)}); "
+            "mixed embedding backends corrupt similarity scores"
+        )
+    dot = sum(a[i]*b[i] for i in range(len(a)))
+    na = math.sqrt(sum(x*x for x in a))
+    nb = math.sqrt(sum(x*x for x in b))
     return dot / (na*nb) if na and nb else 0.0

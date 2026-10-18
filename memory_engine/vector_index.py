@@ -50,11 +50,21 @@ class MemoryVectorIndex:
             self._matrix[user_id] = np.empty((0, 0), dtype=np.float32)
             return
 
-        dim = max(len(vectors[mid]) for mid in ids)
+        # Refuse mixed-dimension vectors instead of zero-padding: a padded row
+        # keeps meaningless cosine scores against the shared prefix, which
+        # silently corrupts retrieval (this exact failure contaminated several
+        # Phase 2 study records before the strict embedding policy landed).
+        dims = {len(vectors[mid]) for mid in ids}
+        if len(dims) > 1:
+            raise ValueError(
+                f"inconsistent embedding dimensions for user {user_id!r}: {sorted(dims)}. "
+                "Mixed dimensions indicate an embedding backend change or a silent "
+                "fallback mid-run; refusing to build a padded matrix."
+            )
+        dim = dims.pop()
         matrix = np.zeros((len(ids), dim), dtype=np.float32)
         for row, mid in enumerate(ids):
-            arr = vectors[mid]
-            matrix[row, :len(arr)] = arr
+            matrix[row, :] = vectors[mid]
         self._matrix[user_id] = matrix
 
     def add(self, user_id: str, memory_id: str, vector: list[float]) -> None:
@@ -91,11 +101,19 @@ class MemoryVectorIndex:
             if matrix is None or matrix.size == 0:
                 return []
 
-            q = np.asarray(query_vector, dtype=np.float32)
+            q = np.asarray(query_vector, dtype=np.float32).reshape(-1)
             qnorm = float(np.linalg.norm(q))
             if qnorm <= 0:
                 return []
             q = q / qnorm
+
+            index_dim = int(matrix.shape[1])
+            if index_dim != q.shape[0]:
+                raise ValueError(
+                    f"query embedding dimension {q.shape[0]} does not match index "
+                    f"dimension {index_dim} for user {user_id!r}; stored vectors and "
+                    "queries must come from the same embedding backend"
+                )
 
             allowed = set(ids) if ids is not None else None
             positions = [

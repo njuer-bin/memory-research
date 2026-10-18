@@ -12,10 +12,19 @@
 
 - Embedding model: **`bge-m3:latest`** via Ollama `/api/embeddings`
   (override with `OLLAMA_EMBEDDING_MODEL`).
-- Phase 1 smoke tests accidentally ran with the hash-embedding fallback
-  (default `qwen3-embedding:4b` was not installed). Those runs are pipeline
-  validation only and are **not** paper results. All Phase 2 runs set
-  `OLLAMA_EMBEDDING_MODEL=bge-m3:latest`.
+- **Strict failure policy (C8 fix, 2026-10-18)**: a failing embedding request is
+  retried 3× (60s timeout, 0.5s backoff; env `EMBEDDING_RETRIES`,
+  `EMBEDDING_TIMEOUT`, `EMBEDDING_RETRY_BACKOFF`) and then raises
+  `EmbeddingUnavailableError`. The historical silent hash fallback contaminated
+  study records (see docs/AUDIT-2026-10-18.md C8) and is opt-in only:
+  `USE_OLLAMA_EMBEDDING=0` (offline) or `EMBEDDING_ALLOW_FALLBACK=1`.
+- Every run warms the embedding backend up front and aborts on failure.
+- Verify a finished run with
+  `python experiments/audit_embedding_dims.py --expect 1024`
+  (scans `data/*.db`; every stored vector must be 1024-dim bge-m3).
+- Repairing individual failed records (do not re-run the whole study):
+  `python -m experiments.run_oracle_experiments --dataset <id> --limit <n> \
+   --out results/<study> --append --ids <qid1>,<qid2>`
 - The memory analyzer (fact/relation/event extraction) is deterministic and
   rule-based; it makes no LLM calls. Only answer generation, semantic judging
   and embeddings hit the model server.
@@ -46,9 +55,15 @@ roughly 3–5 min/record (3 answer generations + 4 judge calls + embeddings).
 Commands (run from the repository root; results go to per-study directories):
 
     OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
+    OLLAMA_MODEL=qwen2.5:7b OLLAMA_JUDGE_MODEL=qwen2.5:7b \
       python -m experiments.run_oracle_experiments \
-      --dataset longmemeval_s_sample10 --limit 10 \
-      --out results/study2a_longmemeval_s
+      --dataset longmemeval_oracle_n50 --limit 50 \
+      --out results/study2b_longmemeval_oracle_n50
+
+After every study: `python experiments/audit_embedding_dims.py` must report
+all-1024-dim, then `python experiments/paired_stats.py --input
+results/<study>/comparison.jsonl --dataset <dataset id>` for the condition
+comparison.
 
 Study sets are rebuilt with `experiments/build_study_set.py` at fixed seeds
 (20261018); see README data section for provenance and license notes.
