@@ -135,23 +135,32 @@ extraction, temporal reasoning, and knowledge updates; LoCoMo
 evidence-boundary substrates and treat their gold evidence spans as the
 lifecycle signal.
 
-\paragraph{Memory architectures.} RAG-style stores, consolidation and
-reflection pipelines \cite{generative-agents,memgpt,reflexion} optimize recall
-or answer accuracy. Our
-contribution is orthogonal: an attribution instrument that runs on a
-concrete open implementation, so the protocol's claims are checkable.
+\paragraph{Memory architectures.} RAG-style stores \cite{retrieval-augmented-generation,bm25},
+consolidation and reflection pipelines \cite{generative-agents,memgpt,reflexion},
+and recent agent-memory systems \cite{mem0,mnemonic,memobase} optimize recall
+or answer accuracy. These works report what the system remembers or
+answers; ours reports \emph{where along the lifecycle} the evidence was
+lost, on a concrete open implementation, so the protocol's claims are
+checkable rather than asserted.
 
 \paragraph{Failure analysis and attribution.} Error taxonomies for agents
-and RAG failure analyses \cite{retrieval-augmented-generation,survey-memory-agents} typically
-require human trace reading.
-Our protocol automates the lifecycle attribution while keeping the human in
-the loop for judge reliability (\S\ref{sec:results}).
+and RAG failure analyses \cite{survey-memory-agents} typically
+require human trace reading, and long-context degradation studies
+\cite{lost-in-middle} characterize attention-side loss rather than
+memory-pipeline loss. Our protocol automates the lifecycle attribution
+while keeping the human in the loop for judge reliability
+(\S\ref{sec:results}).
 
 \paragraph{Evaluation methodology.} LLM-as-judge and semantic evaluation
 \cite{llm-as-judge,g-eval}; judge reliability and self-preference bias
-\cite{kadavath-metamemory}. We
-measure inter-judge agreement explicitly (Cohen's $\kappa$) and keep the
-judge model separate from the answer model in the cross-model design.
+\cite{kadavath-metamemory}; uncertainty and abstention \cite{thinking-fast-slow-llm}.
+We measure inter-judge agreement explicitly (Cohen's $\kappa$, Study 2E)
+and keep the judge model separate from the answer model in the
+cross-model design (Study 2D). For condition comparisons we use exact
+McNemar tests \cite{exact-mcnemar} with paired bootstrap CIs
+\cite{efron-bootstrap}, and treat questions within one conversation as
+correlated \cite{dietterich-nested}, reporting per-type breakdowns rather
+than pooling silently.
 
 % ---------------------------------------------------------------------------
 \section{Protocol: Lifecycle-Boundary Attribution}
@@ -358,17 +367,42 @@ uncertainty rate.}
 The stage-recall chain localizes the loss: formation recall is the lowest
 measured boundary, and context recall is high once evidence is stored. This
 is an architectural statement: coverage of the extractor, not retrieval
-quality, is the binding constraint for the systems under test.
+quality, is the binding constraint for the systems under test. In Study 2B
+the pattern is sharp---45/50 real-memory runs lose gold evidence at
+formation (recall 0.236), while storage, retrieval, and reranking are at or
+near ceiling (1.000, 1.000, 0.987). Once Oracle Memory injects gold as
+formed facts, every pre-context stage returns to 1.000 and only three
+context-assembly failures remain. The deficit is therefore almost entirely
+upstream of retrieval: improving rankers or context windows cannot recover
+evidence the extractor never formed.
 
 \paragraph{Why end-to-end accuracy misleads.}
 Lexical scoring produces false negatives on concise correct answers, which
 the semantic layer resolves; conversely, lineage matches without content
 preservation inflate recall. Both effects move attributed failures toward
-the wrong boundary---and both are regression-tested.
+the wrong boundary---and both are regression-tested. In Study 2B, lexical
+accuracy under real memory (38.0\%) sits 28 points below the semantic
+verdict (66.0\%): a system evaluated lexically would look retrieval-broken
+when it is extraction-broken.
+
+\paragraph{What the E0 gate changes.}
+Before any failure label, the gate asks whether the benchmark's own
+reference answer is recoverable from the gold evidence. In Study 2B, 8/50
+items fail this check (and 2 are judge-uncertain), i.e., 20\% of the
+nominal error budget is benchmark evidence insufficiency or judge
+uncertainty, not memory failure. Protocols that skip this gate silently
+convert benchmark noise into system failures; we report \ezero{} and
+\evaluncertain{} as first-class outcomes.
 
 \paragraph{Oracle inversions.}
 Real-vs-oracle inversions are labeled \rcfailure{} and reported separately;
-they bound how much of an oracle deficit is reasoning-side.
+they bound how much of an oracle deficit is reasoning-side. In Study 2B,
+two records are correct under Real Memory but wrong under Oracle Memory
+($c{=}2$): the oracle pipeline is not uniformly better, and the
+paired statistic accounts for it. Oracle Context---which bypasses the
+pipeline---answers 75.0\% despite having perfect context, so reasoning on
+perfect evidence is itself imperfect; this is why H2 is stated as
+Oracle Memory $\gg$ Oracle Context rather than oracle perfection.
 
 % ---------------------------------------------------------------------------
 \section{Limitations}
@@ -396,10 +430,38 @@ with content or lexical with semantic correctness.
 
 % ---------------------------------------------------------------------------
 \section*{Responsible NLP Checklist}
-\todo{Complete at camera-ready per ARR requirements: dataset versions and
-licenses (manifest in artifact), language coverage (English), compute
-(hardware, model sizes), intended use and misuse, artifact anonymization
-status.}
+
+\paragraph{Datasets.} LongMemEval-s \cite{longmemeval} and LoCoMo
+\cite{locomo}, both publicly released for research. We use published
+question-level subsets (LongMemEval-s, LongMemEval oracle subset, LoCoMo)
+and join conversations at load time from the local full data; raw
+benchmark text is not redistributed in the artifact (dataset versions and
+licenses are recorded in the artifact manifest). Both benchmarks contain
+English conversational dialogues; the subset used here contains no
+multi-modal records.
+
+\paragraph{Personal data.} Both benchmarks are synthetic or licensed
+fictional dialogues; no personal data of the authors or annotators is
+used. Speaker names are pseudonyms internal to the benchmarks.
+
+\paragraph{Models and compute.} Answer models \texttt{qwen2.5:7b}
+\cite{qwen25} and \texttt{gemma3:12b}, embedding model \texttt{bge-m3}
+\cite{bge-m3}, all served locally via Ollama with recorded digests. Total
+compute is single-GPU (laptop-class, 8\,GB VRAM); the full pipeline runs
+in a few hours per study.
+
+\paragraph{Intended use and misuse.} The protocol is intended for
+diagnosing memory-system failures in research settings. It is not a
+leaderboard metric: attribution characterizes the concrete implementation
+family under test (rule-based analyzer plus dense retrieval), and
+stage-boundary numbers should not be quoted as properties of other
+architectures. Automated attribution may mislabel cases where gold
+evidence is ambiguous; we therefore report \ezero{} and \evaluncertain{}
+separately instead of forcing a failure label.
+
+\paragraph{Anonymization.} The public artifact will be anonymized for
+review (author-identifying metadata stripped; a separate anonymous branch
+is prepared); model-server endpoints and paths are scrubbed.
 
 % ---------------------------------------------------------------------------
 \bibliographystyle{acl_natbib}
