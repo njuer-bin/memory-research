@@ -108,3 +108,37 @@ bootstrap CIs.
 2. Every run must store: dataset id, limit, model + digest, seeds, code commit hash.
 3. `results/` is never committed; publish run summaries + per-question traces
    as release artifacts or in the paper appendix.
+
+## Model selection env vars (verified 2026-10-18)
+
+The pipeline reads exactly two model-selection variables:
+
+- `ANSWER_MODEL` — answer generation (default `qwen2.5:7b`), read at import
+  time by `evaluation/answer_generation.py`.
+- `SEMANTIC_JUDGE_MODEL` — semantic judge (defaults to `ANSWER_MODEL`), read
+  at import time by `evaluation/answer_semantic_eval.py`.
+
+`OLLAMA_MODEL` / `OLLAMA_JUDGE_MODEL` are NOT consumed anywhere; studies 2A/2B
+were unaffected only because their values equaled the defaults. Studies 2D/2E
+must use the variables above.
+
+## Study 2D (cross-model answer: gemma3:12b)
+
+```bash
+OLLAMA_EMBEDDING_MODEL=bge-m3:latest ANSWER_MODEL=gemma3:12b \
+  SEMANTIC_JUDGE_MODEL=qwen2.5:7b \
+  python -m experiments.run_oracle_experiments \
+  --dataset longmemeval_oracle_n50 --limit 50 --out results/study2d_longmemeval_gemma
+```
+
+## Study 2E (judge reliability: gemma3:12b re-judging 2B's stored answers)
+
+```bash
+OLLAMA_EMBEDDING_MODEL=bge-m3:latest SEMANTIC_JUDGE_MODEL=gemma3:12b \
+  python -m experiments.rejudge_answers \
+  --input results/study2b_longmemeval_oracle_n50/comparison.jsonl \
+  --output results/study2e_judge_gemma/comparison.jsonl \
+  --limit 20 --seed 20261018
+# then: paired_stats.py --judge-input results/study2e_judge_gemma/comparison.jsonl ...
+# (same seed -> same 20 records as the 2B subsample; kappa computed on the pair)
+```
