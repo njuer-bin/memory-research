@@ -80,16 +80,34 @@ dominant boundary is *not* the one commonly assumed.
   - H3: Real-vs-Oracle inversions (oracle wrong, real right) are control
     failures, not evidence for reasoning strength.
 
-## 5. Results (to be filled from Phase 2 runs)
+## 5. Results (2A/2B filled from strict-mode reruns; 2C/2D/2E in progress)
 
-- 5.1 Study 2A: protocol replication, n=10 full haystack; three-condition
-  independence; calibration-period false negatives explained.
-- 5.2 Study 2B: n=50 primary results; failure distribution; McNemar/bootstrap.
-- 5.3 Study 2C: LoCoMo cross-benchmark replication; per-task-type breakdown.
-- 5.4 Study 2D: gemma3:12b robustness; judge model effects.
-- 5.5 Study 2E: judge agreement (kappa), uncertainty rate.
+- 5.1 Study 2A ✅ (strict rerun, 10/10, 0 errors): real 7/10 vs oracle
+  memory 10/10 vs oracle context 10/10; first loss F1×8, F3×1, context×1;
+  E0 gate 10/10 sufficient; McNemar p=0.25 (underpowered by design).
+- 5.2 Study 2B ✅ (strict rerun, 50/50, 0 errors): real 31/47=66.0% vs
+  oracle memory 40/48=83.3% vs oracle context 36/48=75.0% (semantic);
+  McNemar b=10 c=2 p=0.0386, bootstrap CI [+0.043,+0.319]; real vs oracle
+  context p=0.1250 CI [+0.000,+0.217]; first loss F1 45/50; E0 40/8/2;
+  answer failures F1 9, E0 7, EVAL 3; per-type: multi-session and
+  temporal-reasoning worst (F1×4 each).
+- 5.3 Study 2C ⏳ running (LoCoMo n=50, ~600 msgs/record avg, est. 2-3.5h).
+- 5.4 Study 2D ⏳ pending (gemma3:12b answer model).
+- 5.5 Study 2E ⏳ pending (gemma3:12b judge, 20-record seeded subsample).
 
-## 6. Analysis
+## 6. Analysis (2B findings written)
+
+- Formation is the binding boundary: recall 0.236 vs ceiling elsewhere;
+  oracle injection restores 1.0 pre-context → extractor coverage, not
+  retrieval, is the constraint.
+- Lexical (38.0%) vs semantic (66.0%) gap: lexical evaluation would
+  misdiagnose an extraction failure as a retrieval failure.
+- E0 gate: 8/50 items evidence-insufficient + 2 uncertain → 20% of the
+  nominal error budget is benchmark noise, not system failure.
+- Oracle inversions c=2 (real right, oracle wrong) → oracle is not
+  uniformly better; paired stats account for it.
+
+## 7. Conclusion
 
 - Where memory fails: boundary distribution and what it implies for
   architecture (formation coverage vs. retrieval vs. context budget).
@@ -98,9 +116,7 @@ dominant boundary is *not* the one commonly assumed.
 - Threats to validity: n=50 sample size, two benchmarks, local models,
   rule-based analyzer, judge model choice (quantified in 2E).
 
-## 7. Conclusion
-
-## Artifacts
+## 8. Artifacts
 
 - Code + frozen protocol + tests: this repository (public).
 - Study subsets with seeds; run summaries with model digests and code
