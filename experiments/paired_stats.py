@@ -154,8 +154,17 @@ def mean_stage_recall(rows: list[dict[str, Any]], mode: str) -> dict[str, float]
 
 
 def type_of(row: dict[str, Any]) -> str:
+    # LongMemEval: question_type; LoCoMo: category (raw). Same key order as
+    # build_study_set.type_of so study sets and stats agree.
     raw = (row.get("metadata") or {}).get("raw") or {}
-    value = row.get("question_type") or raw.get("question_type") or row.get("task_type") or "NA"
+    value = (
+        row.get("question_type")
+        or raw.get("question_type")
+        or row.get("category")
+        or raw.get("category")
+        or row.get("task_type")
+        or "NA"
+    )
     if isinstance(value, list):
         value = value[0] if value else "NA"
     return str(value)
