@@ -16,8 +16,13 @@ import argparse
 import json
 import math
 import random
+import sys
 from pathlib import Path
 from typing import Any
+
+# Allow both `python -m experiments.paired_stats` and
+# `python experiments/paired_stats.py` from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 MODES = ("real_memory", "oracle_memory", "oracle_context")
 FAILURE_LABELS = (
@@ -148,6 +153,39 @@ def mean_stage_recall(rows: list[dict[str, Any]], mode: str) -> dict[str, float]
     return {s: totals[s] / count for s in stages} if count else totals
 
 
+def type_of(row: dict[str, Any]) -> str:
+    raw = (row.get("metadata") or {}).get("raw") or {}
+    value = row.get("question_type") or raw.get("question_type") or row.get("task_type") or "NA"
+    if isinstance(value, list):
+        value = value[0] if value else "NA"
+    return str(value)
+
+
+def print_type_breakdown(rows: list[dict[str, Any]], types: dict[str, str]) -> None:
+    """Per-question-type table (paper Table: accuracy + failure mix)."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        groups.setdefault(types.get(row["question_id"], "NA"), []).append(row)
+    print("\n=== BREAKDOWN BY QUESTION TYPE ===")
+    header = f"{'type':28s} {'n':>3s} {'real':>6s} {'oracleM':>7s} {'oracleC':>7s}  failures"
+    print(header)
+    for t in sorted(groups):
+        group = groups[t]
+        cells = []
+        for mode in MODES:
+            flags = [correct_flag(r, mode) for r in group]
+            decided = [f for f in flags if f is not None]
+            acc = sum(1 for f in decided if f) / len(decided) if decided else float("nan")
+            cells.append(f"{acc:.3f}")
+        fails: dict[str, int] = {}
+        for r in group:
+            label = r["modes"]["real_memory"].get("answer_failure_type")
+            if label:
+                fails[label] = fails.get(label, 0) + 1
+        fail_str = ", ".join(f"{k}x{v}" for k, v in sorted(fails.items())) or "-"
+        print(f"{t:28s} {len(group):3d} {cells[0]:>6s} {cells[1]:>7s} {cells[2]:>7s}  {fail_str}")
+
+
 def cohens_kappa(a: list[bool | None], b: list[bool | None]) -> tuple[float | None, int]:
     """Kappa on rows where both judges returned a verdict."""
     pairs = [(x, y) for x, y in zip(a, b) if x is not None and y is not None]
@@ -171,6 +209,12 @@ def main() -> None:
         default=None,
         help="optional second comparison.jsonl with a different judge model, "
         "aligned by question_id, for the judge-agreement study",
+    )
+    parser.add_argument(
+        "--dataset",
+        default=None,
+        help="optional dataset id to join question types for the per-type "
+        "breakdown (e.g. longmemeval_oracle_n50, locomo_n50)",
     )
     parser.add_argument("--bootstrap-repeats", type=int, default=10000)
     args = parser.parse_args()
@@ -231,6 +275,12 @@ def main() -> None:
             f"{mode:16s} "
             + " ".join(f"{s}={recall[s]:.3f}" for s in recall)
         )
+
+    if args.dataset:
+        from datasets.loader import iter_normalized
+
+        types = {r["question_id"]: type_of(r) for r in iter_normalized(args.dataset)}
+        print_type_breakdown(rows, types)
 
     if args.judge_input:
         print("\n=== JUDGE AGREEMENT ===")
