@@ -1,0 +1,44 @@
+{
+  "version": "2.0",
+  "purpose": "Unified registry for memory-failure attribution experiments.",
+  "record_schema": "datasets/schema.json",
+  "data_root": "datasets/data",
+  "datasets": [
+    {
+      "id": "locomo_refined_public",
+      "family": "LoCoMo-Refined",
+      "source": "datasets/data/locomo_refined_dataset/public/questions.jsonl",
+      "conversations": "datasets/data/locomo_refined_dataset/public/conversations.jsonl",
+      "format": "jsonl",
+      "files": ["conversations.jsonl", "questions.jsonl"],
+      "size_hint": {"conversations": 10, "questions": 1382},
+      "capabilities": ["multi_hop", "temporal", "entity_attribution", "abstention", "evidence_coverage"],
+      "status": "ready",
+      "license_note": "Verify LoCoMo-Refined redistribution terms before public release of this repository."
+    },
+    {
+      "id": "longmemeval_s_sample10",
+      "family": "LongMemEval",
+      "source": "datasets/data/longmemeval_s_sample10.json",
+      "format": "json",
+      "capabilities": ["single_hop", "multi_hop", "temporal", "knowledge_update", "conflict", "abstention"],
+      "status": "ready"
+    },
+    {
+      "id": "longmemeval_oracle",
+      "family": "LongMemEval",
+      "source": "datasets/data/longmemeval_oracle.json",
+      "format": "json",
+      "capabilities": ["oracle_memory", "evidence_diagnostics", "multi_hop", "temporal"],
+      "status": "ready"
+    },
+    {
+      "id": "sample_conversation",
+      "family": "local_sample",
+      "source": "datasets/data/sample_conversation.json",
+      "format": "json",
+      "capabilities": ["smoke_test", "schema_validation"],
+      "status": "ready"
+    }
+  ]
+}

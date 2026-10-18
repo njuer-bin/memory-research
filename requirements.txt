@@ -1,0 +1,13 @@
+# Research pipeline dependencies (pinned majors only; see docs/ENVIRONMENT.md for the frozen protocol)
+pydantic>=2.7,<3
+numpy>=1.26,<3
+requests>=2.31,<3
+pyarrow>=15.0            # BEAM parquet loading (optional dataset family)
+
+# Testing
+pytest>=8.0
+
+# Note: the answer model and semantic judge run against a local Ollama server
+# (http://127.0.0.1:11434). See docs/ENVIRONMENT.md for model pinning.
+# The inherited AML web service (FastAPI/uvicorn/psycopg) is intentionally NOT
+# part of the research pipeline and lives in a separate branch/namespace if needed.

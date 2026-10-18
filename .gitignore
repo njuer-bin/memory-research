@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Experiment runtime artifacts (regenerable, never commit)
+results/
+data/
+*.db
+*.sqlite
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Paper build
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+paper/build/

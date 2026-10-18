@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"UnifiedMemoryEvaluationRecord",
+  "type":"object",
+  "required":["dataset","example_id","question","answer","gold_evidence"],
+  "properties":{
+    "dataset":{"type":"string"},"family":{"type":"string"},"split":{"type":["string","null"]},
+    "example_id":{"type":"string"},"conversation_id":{"type":["string","null"]},"question_id":{"type":["string","null"]},
+    "question":{"type":"string"},"answer":{"type":["string","array","null"]},
+    "gold_evidence":{"type":"array","items":{"type":"object","required":["evidence_id"],"properties":{"evidence_id":{"type":"string"},"text":{"type":["string","null"]},"source_id":{"type":["string","null"]},"turn_id":{"type":["string","null"]},"timestamp":{"type":["string","null"]}}},
+    "conversation":{"type":["array","object"]},"task_type":{"type":"array","items":{"type":"string"}},"metadata":{"type":"object"}
+  }
+}
