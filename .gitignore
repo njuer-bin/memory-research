@@ -34,3 +34,10 @@ paper/*.log
 paper/*.out
 paper/*.synctex.gz
 paper/build/
+
+# Study 2B (and later studies): summary + paired stats are committed as
+# progress records; full per-record jsonl stays a release artifact (I5).
+!results/study2b_longmemeval_oracle_n50/
+results/study2b_longmemeval_oracle_n50/*
+!results/study2b_longmemeval_oracle_n50/summary.json
+!results/study2b_longmemeval_oracle_n50/paired_stats.txt
