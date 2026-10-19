@@ -64,3 +64,14 @@ results/study2d_longmemeval_gemma/*
 !results/study2e_judge_gemma/
 results/study2e_judge_gemma/*
 !results/study2e_judge_gemma/judge_agreement.txt
+
+# Study 2E adjudication artifacts
+!results/study2e_judge_gemma/
+results/study2e_judge_gemma/*
+!results/study2e_judge_gemma/adjudication.json
+!results/study2e_judge_gemma/adjudication_report.txt
+!results/study2e_judge_gemma/disagreements.txt
+
+# Stage-recall CI artifacts
+!results/study2b_longmemeval_oracle_n50/stage_recall_ci.txt
+!results/study2c_locomo_n50/stage_recall_ci.txt

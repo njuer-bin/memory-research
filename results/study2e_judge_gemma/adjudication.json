@@ -1,0 +1,23 @@
+{
+  "study": "2E",
+  "description": "Author adjudication of all 16 judge disagreements on the seeded 20-record subsample of Study 2B (qwen2.5:7b judge vs gemma3:12b judge re-judging the same stored answers). Adjudication is by the authors against gold evidence + benchmark reference answer; borderline items (vague preference-type references) are marked as such and excluded from strict match counts.",
+  "seed": 20261018,
+  "cases": [
+    {"n": 1,  "qid": "09d032c9",   "mode": "oracle_context", "qwen": false, "gemma": true,  "truth": "correct",    "note": "answer builds on the power-bank mention, aligned with the preference-type reference"},
+    {"n": 2,  "qid": "1f2b8d4f",   "mode": "real_memory",    "qwen": null,  "gemma": true,  "truth": "incorrect",  "note": "model said $100-$250; gold is $750"},
+    {"n": 3,  "qid": "1f2b8d4f",   "mode": "oracle_memory",  "qwen": null,  "gemma": true,  "truth": "correct",    "note": "model said $750"},
+    {"n": 4,  "qid": "1f2b8d4f",   "mode": "oracle_context", "qwen": false, "gemma": true,  "truth": "correct",    "note": "model said $750"},
+    {"n": 5,  "qid": "60472f9c",   "mode": "real_memory",    "qwen": true,  "gemma": null,  "truth": "incorrect",  "note": "model said 3; gold is 2 excluding thesis"},
+    {"n": 6,  "qid": "60472f9c",   "mode": "oracle_memory",  "qwen": true,  "gemma": null,  "truth": "incorrect",  "note": "model said 3 projects; gold is 2"},
+    {"n": 7,  "qid": "6613b389",   "mode": "real_memory",    "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "model said 4 months; May 15 to Jul 22 is ~2"},
+    {"n": 8,  "qid": "6613b389",   "mode": "oracle_context", "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "same; gemma's own reason cites ~2 months yet accepted 4"},
+    {"n": 9,  "qid": "9a707b81",   "mode": "oracle_memory",  "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "model said 1 day; gold is 21 (22 acceptable)"},
+    {"n": 10, "qid": "9a707b81",   "mode": "oracle_context", "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "same"},
+    {"n": 11, "qid": "a96c20ee",   "mode": "real_memory",    "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "model declined to answer; gold is Harvard"},
+    {"n": 12, "qid": "afdc33df",   "mode": "real_memory",    "qwen": true,  "gemma": false, "truth": "borderline", "note": "generic tips but mentions the utensil holder; reference is a vague preference"},
+    {"n": 13, "qid": "afdc33df",   "mode": "oracle_memory",  "qwen": true,  "gemma": false, "truth": "borderline", "note": "mentions the holder; same vague reference"},
+    {"n": 14, "qid": "gpt4_2ba83207", "mode": "real_memory",  "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "model said Walmart $120; gold Thrive Market $150 is the largest"},
+    {"n": 15, "qid": "gpt4_2ba83207", "mode": "oracle_context", "qwen": false, "gemma": true, "truth": "incorrect", "note": "same"},
+    {"n": 16, "qid": "gpt4_f49edff3", "mode": "real_memory",  "qwen": false, "gemma": true,  "truth": "incorrect",  "note": "model swapped the first two events; timestamps Feb 5 < Feb 10 < Feb 20"}
+  ]
+}

@@ -1,0 +1,10 @@
+decidable cases: 14 (borderline excluded: 2)
+qwen judge matches adjudicated truth: 8/14 = 0.571
+gemma judge matches adjudicated truth: 3/14 = 0.214
+gemma errors: over-accept 9, over-reject 0
+qwen errors:  over-accept 2, over-reject 2
+subsample size: 20
+[qwen-judge (reported)] real 31/47=0.660  oracleM 40/48=0.833  oracleC 36/48=0.750
+[adjudicated-corrected] real 30/48=0.625  oracleM 40/49=0.816  oracleC 38/48=0.792
+[reported] real vs oracleM: b=10 c=2 p=0.0386 | real vs oracleC: b=6 c=1 p=0.1250
+[corrected] real vs oracleM: b=11 c=2 p=0.0225 | real vs oracleC: b=8 c=1 p=0.0391
