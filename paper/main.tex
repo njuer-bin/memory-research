@@ -393,13 +393,50 @@ semantic 52.0\% on real answers), reinforcing that lexical scoring
 would misattribute most of these failures.
 
 \paragraph{Study 2D (cross-model, gemma3:12b).}
-\todo{Fill: same tables under the second answer model; robustness of the
-formation-dominance claim.}
+Replacing the answer model with \texttt{gemma3:12b} (judge unchanged:
+\texttt{qwen2.5:7b}) tests which parts of the attribution are properties
+of the memory pipeline rather than of the answer model. The lifecycle
+side is unchanged exactly as the protocol predicts: real-memory stage
+recall is identical to Study 2B (formation 0.236, first loss \fone{}
+45/50), because extraction never invokes the answer model. The answer
+side compresses: semantic accuracy is 28/47 = 59.6\% (real) vs.\
+32/49 = 65.3\% (oracle memory) vs.\ 34/49 = 69.4\% (oracle context).
+The real-vs-oracle-memory contrast loses significance
+($b{=}7$, $c{=}4$, $p{=}0.549$, CI $[-0.064, +0.213]$)---a weaker
+answer model leaves less headroom for the oracle advantage to
+express---while real vs.\ oracle context remains directional with
+$c{=}0$ (real never beats oracle context; $b{=}5$,
+$p{=}0.063$, CI $[+0.021, +0.191]$). One inversion appears in the
+multi-session type (real 0.500 vs.\ oracle memory 0.417), consistent
+with oracle injection occasionally crowding the context. The
+cross-model design also bounds judge dependence: the judge model is
+held fixed across 2B and 2D, so the lifecycle labels---formation
+dominance in particular---cannot be artifacts of judge--answer model
+co-adaptation, and Study 2E directly measures the judge axis.
 
 \paragraph{Study 2E (judge reliability).}
-\todo{Fill: Cohen's $\kappa$ between qwen2.5:7b and gemma3:12b judges on a
-seeded 20-record subsample of 2B (same stored answers); raw agreement;
-uncertainty rate.}
+Gemma3:12b re-judges the stored answers of a seeded 20-record subsample
+of Study 2B (seed 20261018; 55 paired verdicts across the three
+conditions). Raw agreement between the two judge families is 43/55 =
+78.2\%, but Cohen's $\kappa$ over the three-way verdict
+(correct/incorrect/uncertain) is low: $\kappa = 0.158$. The gap between
+raw agreement and $\kappa$ is a prevalence effect (41/55 verdicts are
+agree-correct), and the disagreements are asymmetric: in 10 of 12
+incorrect-disagreements the stricter qwen2.5:7b judge says
+\emph{incorrect} where gemma3:12b says \emph{correct}, concentrated on
+borderline cases (answers that require a small arithmetic step from the
+evidence, or superlatives supported by a single evidence item); gemma
+also resolves two of qwen's \emph{uncertain} verdicts as correct. Two
+consequences for the protocol. First, headline semantic accuracy has a
+judge-sensitive borderline band, and single-judge numbers should be
+read with that band in mind. Second, and more importantly, the
+lifecycle attribution that constitutes our main claim is
+judge-independent: stage recall is computed from pipeline artifacts,
+not from verdicts, so the formation-dominance result (first loss
+\fone{} 45/50 in 2B; identical stage recall in 2D) cannot be an
+artifact of judge choice. The judge only enters at the
+failure/no-failure boundary and in the E0/EVAL outcomes, which is
+exactly where we report its measured disagreement.
 
 % ---------------------------------------------------------------------------
 \section{Analysis}
@@ -466,9 +503,15 @@ Oracle Memory $\gg$ Oracle Context rather than oracle perfection.
 Sample sizes are n=50 per benchmark with two answer models; estimates carry
 the corresponding uncertainty (reported as paired bootstrap CIs). The
 analyzer is rule-based, so formation-boundary numbers characterize this
-implementation family, not all memory systems. The judge is an LLM; we
-quantify judge variance (Study 2E) but human adjudication of a sample
-remains future work. Benchmarks are English conversational QA; temporal and
+implementation family, not all memory systems. The judge is an LLM: Study~2E
+measures cross-family judge disagreement and finds a prevalence-inflated
+raw agreement ($\kappa=0.158$) with a systematic leniency asymmetry on
+borderline cases, so headline semantic accuracies carry a judge-sensitive
+band; our core attribution claims are judge-independent (stage recall is
+artifact-based), but E0/EVAL outcome counts are not, and human adjudication
+of a disagreement sample remains future work. LoCoMo category semantics were
+mapped from question inspection and secondary documentation rather than an
+authoritative legend. Benchmarks are English conversational QA; temporal and
 multi-hop question types are represented but not exhaustively. The public
 artifact must be anonymized for review per the current call.
 
