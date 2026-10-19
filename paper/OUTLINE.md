@@ -101,8 +101,31 @@ dominant boundary is *not* the one commonly assumed.
   compresses under weaker answer model); real vs oracleC p=0.063 c=0;
   stage recall identical to 2B (formation 0.236, F1 45/50) -> formation
   boundary is answer-model-independent. Filled into paper.
-- 5.5 Study 2E ⏳ running (gemma3:12b judge re-judging 2B's 20-record seeded
-  subsample; kappa via paired_stats --judge-input).
+- 5.5 Study 2E ✅ (gemma3:12b judge, 20-record subsample): raw 78.2%,
+  kappa=0.158; author adjudication of all 16 disagreements (qwen 8/14 vs
+  gemma 3/14; gemma leniency 9 over-accept / 0 over-reject);
+  adjudication-corrected sensitivity: real 62.5%, oracleM 81.6%, oracleC
+  79.2%, p=0.0225 / p=0.0391.
+
+## Revision round (external review, 2026-10-19)
+
+Review-driven changes:
+
+1. ✅ Contributions reworked: oracle controls demoted to instrument;
+   headline = anti-circular E0 gate + measurement fixes + adjudicated
+   judge study + multi-arm empirical study.
+2. ✅ MemTrace (2606.17328) / MEMTIER (2605.03675) verified and cited;
+   three-way bottleneck divergence synthesized as protocol motivation.
+3. ✅ Stage-recall bootstrap CIs (2B/2C); formation/evolution tie explained.
+4. ✅ 2E disagreement adjudication (artifact + sensitivity analysis).
+5. ✅ Oracle-context inversion explained (attention dilution, not coverage).
+6. ✅ Limitations restructured (external validity, power, judge, coverage).
+7. ⏳ Study 2F extractor ablation running (n=50, LLM formation arm).
+   Partial (10/50): formation recall 0.236→0.925, first-loss F1 90%→10%,
+   E0 emerges as the largest residual budget → boundary moves with the
+   extractor, answering the external-validity objection directly.
+8. ⏳ After 2F: fill results section + Analysis paragraph; recompile;
+   final layout verification.
 
 ## 6. Analysis (2B findings written)
 
