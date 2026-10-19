@@ -65,17 +65,20 @@ $\rightarrow$ reasoning $\rightarrow$ answer). Three design choices make the
 attribution reliable: an anti-circular evidence-sufficiency gate that compares
 gold evidence against the benchmark reference answer rather than the model's
 own prediction; a semantic decision layer in which lexical metrics never enter
-attribution; and three orthogonal control conditions---Real Memory, Oracle
-Memory (gold injected as formed memories into an independent engine), and
-Oracle Context (gold injected directly into the context)---that separate
-retrieval-side from reasoning-side failures. Running the protocol on two
-long-term-memory benchmarks (LongMemEval-s and LoCoMo) with paired statistics
-and a judge-reliability study, we find that the dominant boundary is
-\emph{formation}, not retrieval: real memory loses a large fraction of gold
-evidence before it ever reaches the store, and once evidence reaches the
-final context the answer model rarely fails. The protocol, the measurement
-validity fixes it required, and the full per-question traces are released as
-an open artifact.
+attribution; and control conditions---Real Memory, Oracle Memory (gold
+injected as formed memories into an independent engine), and Oracle Context
+(gold injected directly into the context)---that separate retrieval-side from
+reasoning-side failures. Running the protocol on two long-term-memory
+benchmarks (LongMemEval-s and LoCoMo) with paired statistics, two answer
+models, two formation extractors, and a judge-reliability study with author
+adjudication, we find that the dominant boundary is \emph{formation}, not
+retrieval: real memory loses a large fraction of gold evidence before it ever
+reaches the store, and once evidence reaches the final context the answer
+model rarely fails. The boundary shifts downstream on long conversations and
+moves again when the extractor is swapped, which is why an attribution
+protocol rather than a single bottleneck claim is the transferable
+contribution. The protocol, the measurement-validity fixes it required, and
+the full per-question traces are released as an open artifact.
 \end{abstract}
 
 % ---------------------------------------------------------------------------
@@ -102,28 +105,43 @@ to reasoning.
 
 \paragraph{Contributions.}
 \begin{enumerate}
-\item \textbf{A frozen attribution protocol.} \protocol{} labels every wrong
-answer with the earliest lifecycle boundary at which gold evidence is not
-fully present, with an evidence-sufficiency gate (\ezero{}) that is
-anti-circular by construction and a semantic-judge decision layer. All
+\item \textbf{A frozen attribution protocol with an anti-circular evidence
+gate.} \protocol{} labels every wrong answer with the earliest lifecycle
+boundary at which gold evidence is not fully present. Before any failure
+label is assigned, an \ezero{} gate asks whether the benchmark's own
+reference answer is recoverable from the gold evidence---comparing against
+the reference rather than the model's prediction, which breaks the
+``wrong answer $\to$ missing evidence $\to$ blame memory'' circularity. All
 thresholds are frozen before any large-scale run (\S\ref{sec:protocol}).
-\item \textbf{Three orthogonal control conditions.} Real Memory, Oracle
-Memory, and Oracle Context, each measured with its own stage trace. Oracle
-Memory injects gold evidence as formed memories into an independent engine
-that runs the full retrieval/reranking/context pipeline; Oracle Context
-bypasses it. The two controls bound where a failure can live.
-\item \textbf{Measurement-validity fixes with regression tests.} Provenance
-matches require content preservation; semantic evidence matching requires
-faithful representation rather than topical overlap; deterministic evaluator
-channels are narrowed to quote/date rules; embedding-backend failures are
-loud rather than silently degrading. Each fix ships with regression tests,
-including two calibration-period false negatives that pinned the bugs.
-\item \textbf{An empirical study on two benchmarks} with paired statistics
-(exact McNemar, paired bootstrap CIs), per-question-type breakdowns, a
-cross-model replication, and an inter-judge agreement study. The dominant
-failure boundary is \emph{formation}; reasoning failures (F6 candidates) are
-rare and mostly control failures of the oracle conditions.
+\item \textbf{Measurement-validity fixes, each with regression tests.}
+Lexical scores never enter attribution (they conflate representation
+failures with reasoning failures); provenance matches require content
+preservation; semantic evidence matching requires faithful representation
+rather than topical overlap; deterministic judge channels are narrowed to
+quote/date rules; embedding-backend failures fail loudly instead of
+silently degrading. Each fix ships with regression tests, including two
+calibration-period false negatives that pinned the bugs.
+\item \textbf{A judge-reliability study with author adjudication.} We
+measure inter-judge agreement (Cohen's $\kappa$) between two judge models
+on a seeded subsample, adjudicate every disagreement against gold
+evidence, and report how the headline numbers move under the adjudicated
+verdicts (Study 2E). To our knowledge this is the first adjudicated
+judge-reliability measurement in long-term memory evaluation.
+\item \textbf{An empirical study on two benchmarks, two answer models, and
+two formation extractors,} with paired statistics (exact McNemar, paired
+bootstrap CIs), per-question-type breakdowns, and a cross-model
+replication. The dominant failure boundary is \emph{formation}; reasoning
+failures (F6 candidates) are rare and mostly control failures of the
+oracle conditions. An extractor ablation (Study 2F) shows the boundary is
+a property of the formation stage, not of one rule-based implementation.
 \end{enumerate}
+
+The three-condition design (Real Memory / Oracle Memory / Oracle Context)
+is the measurement instrument these contributions run on, not a
+contribution in itself: oracle-style controls have become common in
+memory evaluation \cite{memtrace,memtier}. What is new is the protocol
+around them---the anti-circular gate, the frozen thresholds, the
+regression-tested validity fixes, and the adjudicated judge study.
 
 % ---------------------------------------------------------------------------
 \section{Related Work}
@@ -150,6 +168,32 @@ require human trace reading, and long-context degradation studies
 memory-pipeline loss. Our protocol automates the lifecycle attribution
 while keeping the human in the loop for judge reliability
 (\S\ref{sec:results}).
+
+\paragraph{Diagnosing where memory fails (2024--2026).} A first wave of
+automated failure-attribution work targets multi-agent systems: Who\&When
+localizes the responsible agent and the decisive failure step
+\cite{whowhen}; AgenTracer uses counterfactual replay and fault injection
+to label failure traces \cite{agentracer}; AgentDebug classifies errors
+into memory, reflection, planning, action, and system-level modules
+\cite{agentdebug}. Two 2026 preprints probe long-term memory systems
+specifically, and their conclusions differ from ours in an instructive
+way. MemTrace measures per knowledge point across 13 system configurations
+and four paradigms, and reports that the dominant bottleneck is
+\emph{evidence use}, not retrieval: when systems fail, the evidence was
+retrievable ten times more often than it was missing \cite{memtrace}.
+MEMTIER analyzes retrieval bottlenecks in a tiered memory architecture on
+LongMemEval-S with Qwen2.5-7B, reporting that structured pre-population
+lifts single-session recall to 0.686--0.714 \cite{memtier}. We read the
+three-way divergence---MemTrace's ``evidence use'', MEMTIER's
+``retrieval'', and our formation dominance---not as a contradiction but
+as the central motivation for a protocol: the dominant boundary moves
+with the system under test and the workload shape, so no single pooled
+score can locate it. Our Study 2F isolates exactly this variable by
+swapping the formation extractor inside one fixed pipeline, and Study 2C
+shows the boundary shifting downstream on longer conversations
+(\S\ref{sec:results}). Oracle-style controls are now common in this
+literature \cite{memtrace,memtier}; the contribution we claim is not the
+oracle construction itself but the attribution protocol around it.
 
 \paragraph{Evaluation methodology.} LLM-as-judge and semantic evaluation
 \cite{llm-as-judge,g-eval}; judge reliability and self-preference bias
@@ -218,12 +262,17 @@ afterwards (\S\ref{sec:design}).
 \label{sec:design}
 
 \paragraph{System under test.}
-A concrete open implementation: a deterministic rule-based analyzer
-(facts, relations, events, rules, profiles), an embedding store with dense
-retrieval and reranking, context assembly, and a local answer model
-(\texttt{qwen2.5:7b}, temperature 0; \texttt{gemma3:12b} cross-check),
-\texttt{bge-m3} embeddings. The analyzer makes no LLM calls; only answer
-generation, semantic judging, and embeddings hit the model server.
+A concrete open implementation: a formation extractor, an embedding store
+with dense retrieval and reranking, context assembly, and a local answer
+model (\texttt{qwen2.5:7b}, temperature 0; \texttt{gemma3:12b} cross-check),
+\texttt{bge-m3} embeddings. The formation extractor has two arms behind
+one interface: a deterministic rule-based analyzer (facts, relations,
+events, rules, profiles) and an LLM-driven extractor
+(\texttt{qwen2.5:7b}, Study 2F). Everything downstream of formation---
+governance, storage, retrieval, reranking, context assembly---is
+identical across arms, so the extractor is the only varying component.
+The rule arm makes no LLM calls at all; only answer generation, semantic
+judging, embeddings, and the 2F extraction arm hit the model server.
 
 \paragraph{Conditions.}
 \textbf{Real Memory}: full pipeline over the conversation.
@@ -281,9 +330,13 @@ backend verified clean: 119 databases, 7{,}000 vectors, all 1024-dim).
 Semantic accuracy (uncertain verdicts excluded from the denominator) is
 66.0\% for Real Memory (31/47), 83.3\% for Oracle Memory (40/48), and
 75.0\% for Oracle Context (36/48). Real Memory loses gold evidence at the
-\emph{formation} boundary in 45/50 cases (90\%): formation recall 0.236 and
-evolution recall 0.236, against storage 1.0, retrieval 1.0, rerank 0.987,
-and context 0.695. Oracle Memory restores every pre-context stage to 1.0
+\emph{formation} boundary in 45/50 cases (90\%): formation recall 0.236
+(95\% CI $[0.147, 0.331]$) and evolution recall 0.236, against storage
+1.0, retrieval 1.0, rerank 0.987 (CI $[0.967, 1.000]$), and context 0.695
+(CI $[0.598, 0.791]$; bootstrap over questions, 10{,}000 resamples). The
+formation/evolution tie is mechanical: facts that fail formation are also
+absent from every later stage, so evolution recall inherits the formation
+deficit rather than adding an independent one. Oracle Memory restores every pre-context stage to 1.0
 and reaches 0.979 context recall; its remaining three failures are
 context-assembly, not formation. The E0 gate finds 40/50 benchmark items
 carry sufficient evidence, 8 insufficient (reported as \ezero{}, not as
@@ -368,7 +421,14 @@ $b{=}16$, $c{=}5$, $p{=}0.0266$, CI $[+0.040, +0.380]$). First loss is
 again concentrated at formation (\fone{} 46/50; none 1, \ffour{} 2,
 \ffive{} 1), and the answer-failure distribution is
 \fone{}$\times$18, \ezero{}$\times$3, \ffour{}$\times$3 (E0 gate: 47
-sufficient, 3 insufficient).
+sufficient, 3 insufficient). The shift is on the retrieval side: with the
+same rule extractor, retrieval recall drops from 1.000 (2B) to 0.608
+(CI $[0.483, 0.728]$) and reranking from 0.987 to 0.527 (CI $[0.398,
+0.655]$) once conversations grow to hundreds of messages, so \ffour{}
+losses appear for the first time (3/24 attributable). Formation recall is
+even lower than in 2B (0.097, CI $[0.028, 0.182]$): long conversations
+stress the extractor further. The boundary moves with the workload, but
+it has not left the pre-context stages.
 
 \begin{table*}[!t]
 \centering\small
@@ -423,6 +483,18 @@ held fixed across 2B and 2D, so the lifecycle labels---formation
 dominance in particular---cannot be artifacts of judge--answer model
 co-adaptation, and Study 2E directly measures the judge axis.
 
+\paragraph{Study 2F (extractor ablation).}
+Study 2F swaps the formation extractor inside the otherwise identical
+pipeline: an LLM-driven extractor (\texttt{qwen2.5:7b}, prompted to emit
+atomic facts, relations, events, rules, and profiles as JSON, batched
+four messages per call, temperature 0; unparseable batches fall back to
+the rule extractor and are counted) replaces the rule analyzer, and the
+same 50 LongMemEval-s oracle questions run under the full protocol. This
+is the external-validity control the protocol demands: if formation
+dominance is a property of the pipeline boundary rather than of one
+rule-based implementation, the boundary should move when the extractor
+changes. Results in \S\ref{sec:results} below.
+
 \paragraph{Study 2E (judge reliability).}
 Gemma3:12b re-judges the stored answers of a seeded 20-record subsample
 of Study 2B (seed 20261018; 55 paired verdicts across the three
@@ -435,9 +507,31 @@ incorrect-disagreements the stricter qwen2.5:7b judge says
 \emph{incorrect} where gemma3:12b says \emph{correct}, concentrated on
 borderline cases (answers that require a small arithmetic step from the
 evidence, or superlatives supported by a single evidence item); gemma
-also resolves two of qwen's \emph{uncertain} verdicts as correct. Two
-consequences for the protocol. First, headline semantic accuracy has a
-judge-sensitive borderline band, and single-judge numbers should be
+also resolves two of qwen's \emph{uncertain} verdicts as correct.
+
+\paragraph{Adjudication of the disagreements.}
+Because a low $\kappa$ is only actionable if we know \emph{which} judge
+is right, the authors adjudicated all 16 disagreement cases against the
+gold evidence and benchmark reference answers. Two preference-type items
+were unadjudicable (the reference is too vague to grade) and are
+excluded from the strict count. On the 14 decidable cases the qwen
+judge's verdict matches the adjudicated truth 8/14 times, the gemma
+judge 3/14. The asymmetry is confirmed and sharpened: gemma's errors are
+9 over-acceptances and 0 over-rejections (systematic leniency), while
+the qwen judge's errors are balanced (2 over-acceptances, 2
+over-rejections). Applying the adjudicated verdicts to the 20-record
+subsample (qwen verdicts elsewhere) is a sensitivity analysis for the
+headline numbers: real memory moves from 66.0\% to 62.5\%, Oracle Memory
+from 83.3\% to 81.6\%, Oracle Context from 75.0\% to 79.2\%. The
+condition ordering is unchanged and the primary contrast strengthens:
+real vs Oracle Memory becomes $b{=}11$, $c{=}2$, $p{=}0.0225$ (was
+0.0386), and the marginal real-vs-Oracle-Context contrast becomes
+significant ($b{=}8$, $c{=}1$, $p{=}0.0391$; was 0.125). We report the
+unadjudicated single-judge numbers as primary and the adjudicated
+numbers as this sensitivity analysis.
+
+Two consequences for the protocol. First, headline semantic accuracy has
+a judge-sensitive borderline band, and single-judge numbers should be
 read with that band in mind. Second, and more importantly, the
 lifecycle attribution that constitutes our main claim is
 judge-independent: stage recall is computed from pipeline artifacts,
@@ -477,6 +571,26 @@ constant---shorter curated histories lose evidence almost entirely at
 formation, while long conversational histories additionally stress
 retrieval and reranking.
 
+\paragraph{Divergent bottleneck claims in the literature.}
+Recent work on long-term memory diagnosis reports different dominant
+bottlenecks: MemTrace, probing 13 system configurations across four
+paradigms, concludes that the bottleneck is \emph{evidence use} rather
+than retrieval (when systems fail, the evidence was retrievable ten
+times more often than it was missing) \cite{memtrace}; MEMTIER reports
+retrieval bottlenecks in a tiered architecture and shows structured
+pre-population lifting single-session recall to 0.686--0.714
+\cite{memtier}. Our formation dominance on a rule-extractor pipeline
+appears to disagree with both. We read the divergence as the protocol's
+point rather than its refutation: each study measures a different system
+under test, and the dominant boundary is a property of that system's
+formation stage. A rule-based extractor with no recall-oriented training
+loses most evidence before storage; an LLM-driven extractor (Study 2F)
+recovers much of it and moves the boundary downstream; MemTrace's
+systems retrieve evidence but use it poorly. A pooled accuracy score
+cannot distinguish these regimes---which is exactly why the attribution
+instrument, not any single boundary claim, is the transferable
+contribution.
+
 \paragraph{Why end-to-end accuracy misleads.}
 Lexical scoring produces false negatives on concise correct answers, which
 the semantic layer resolves; conversely, lineage matches without content
@@ -503,26 +617,59 @@ two records are correct under Real Memory but wrong under Oracle Memory
 paired statistic accounts for it. Oracle Context---which bypasses the
 pipeline---answers 75.0\% despite having perfect context, so reasoning on
 perfect evidence is itself imperfect; this is why H2 is stated as
-Oracle Memory $\gg$ Oracle Context rather than oracle perfection.
+Oracle Memory $\gg$ Oracle Context rather than oracle perfection. The
+inversion between the two oracle conditions (Oracle Context 75.0\%
+\emph{below} Oracle Memory 83.3\%, with context recall 1.000 in both)
+is a presentation effect, not a coverage effect: Oracle Memory delivers
+gold evidence through the same reranking and top-$k$ context assembly
+the answer model is tuned for, while Oracle Context dumps every gold
+span into the context at once, diluting attention over the relevant
+span---the long-context degradation pattern documented for LLMs
+\cite{lost-in-middle}. The practical reading is that ``give the model the
+right evidence'' is not a sufficient intervention; \emph{how} evidence
+is assembled into the context window is part of the failure surface.
 
 % ---------------------------------------------------------------------------
 \section{Limitations}
 \label{sec:limitations}
 
-Sample sizes are n=50 per benchmark with two answer models; estimates carry
-the corresponding uncertainty (reported as paired bootstrap CIs). The
-analyzer is rule-based, so formation-boundary numbers characterize this
-implementation family, not all memory systems. The judge is an LLM: Study~2E
-measures cross-family judge disagreement and finds a prevalence-inflated
-raw agreement ($\kappa=0.158$) with a systematic leniency asymmetry on
-borderline cases, so headline semantic accuracies carry a judge-sensitive
-band; our core attribution claims are judge-independent (stage recall is
-artifact-based), but E0/EVAL outcome counts are not, and human adjudication
-of a disagreement sample remains future work. LoCoMo category semantics were
-mapped from question inspection and secondary documentation rather than an
-authoritative legend. Benchmarks are English conversational QA; temporal and
-multi-hop question types are represented but not exhaustively. The public
-artifact must be anonymized for review per the current call.
+\textbf{External validity of the system under test.} All conclusions come
+from one open memory implementation whose formation stage we ablate
+between a rule-based and an LLM-driven extractor (Study 2F), both
+deterministic in their storage, governance, retrieval, and reranking
+stages. Formation-boundary numbers characterize this pipeline family,
+not all memory systems; LLM-native systems with learned extraction and
+consolidation (e.g., \cite{mem0,memtier}) may locate their dominant
+boundary elsewhere, and MemTrace's evidence-use finding on 13 system
+configurations \cite{memtrace} is a case in point. We mitigate this by
+measuring the boundary under two extractors and two answer models, and
+by reporting the workload-dependence of the boundary (2B vs.\ 2C), but a
+broader system sweep is future work.
+
+\textbf{Sample size and statistical power.} $n{=}50$ per benchmark;
+estimates carry the corresponding uncertainty (reported as paired
+bootstrap CIs for both accuracy differences and stage recall). Study 2A
+($n{=}10$) is a protocol-replication check, not an effect-size estimate,
+and is underpowered by design. Questions within one conversation are
+correlated \cite{dietterich-nested}; we report per-type breakdowns and
+treat pooled $p$-values as optimistic.
+
+\textbf{Judge sensitivity.} The judge is an LLM. Study 2E measures
+cross-family judge disagreement and finds a prevalence-inflated raw
+agreement ($\kappa{=}0.158$) with a systematic leniency asymmetry
+(gemma3:12b over-accepts). Author adjudication of all 16 disagreements
+shows the primary judge matching adjudicated truth 8/14 times and
+quantifies the effect on headline numbers ($\pm$4 points; ordering
+unchanged, primary contrast strengthened). E0/EVAL outcome counts remain
+judge-dependent, and the adjudication covers only the 20-record
+subsample; full human annotation of all studies is future work.
+
+\textbf{Benchmark coverage.} LoCoMo category semantics were mapped from
+question inspection and secondary documentation rather than an
+authoritative legend (the mapping table ships with the artifact).
+Benchmarks are English conversational QA; temporal and multi-hop
+question types are represented but not exhaustively. The public artifact
+must be anonymized for review per the current call.
 
 % ---------------------------------------------------------------------------
 \section{Conclusion}
