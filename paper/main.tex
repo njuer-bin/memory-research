@@ -153,7 +153,7 @@ while keeping the human in the loop for judge reliability
 
 \paragraph{Evaluation methodology.} LLM-as-judge and semantic evaluation
 \cite{llm-as-judge,g-eval}; judge reliability and self-preference bias
-\cite{metamemory}; uncertainty and abstention \cite{thinking-fast-slow-llm}.
+\cite{metamemory}; uncertainty and abstention \cite{metamemory}.
 We measure inter-judge agreement explicitly (Cohen's $\kappa$, Study 2E)
 and keep the judge model separate from the answer model in the
 cross-model design (Study 2D). For condition comparisons we use exact
@@ -348,8 +348,49 @@ concentrate in multi-session and temporal-reasoning items.}
 \end{table}
 
 \paragraph{Study 2C (cross-benchmark, LoCoMo n=50).}
-\todo{Fill: same tables; per-category breakdown; compare boundary
-distribution with 2B.}
+LoCoMo questions are embedded in much longer multi-session conversations
+($\sim$600 messages per question across $\sim$28 sessions, versus
+$\sim$115K-token histories in Study 2B), so this study tests whether the
+formation-dominant boundary survives a change of benchmark and workload
+shape. It does, with one informative shift. Semantic accuracy is
+26/50 = 52.0\% (real) vs.\ 36/50 = 72.0\% (oracle memory) vs.\
+37/50 = 74.0\% (oracle context); both oracle contrasts are significant
+(real vs.\ oracle memory: exact McNemar $b{=}15$, $c{=}5$, $p{=}0.0414$,
+paired bootstrap 95\% CI $[+0.040, +0.360]$; real vs.\ oracle context:
+$b{=}16$, $c{=}5$, $p{=}0.0266$, CI $[+0.040, +0.380]$). First loss is
+again concentrated at formation (\fone{} 46/50; none 1, \ffour{} 2,
+\ffive{} 1), and the answer-failure distribution is
+\fone{}$\times$18, \ezero{}$\times$3, \ffour{}$\times$3 (E0 gate: 47
+sufficient, 3 insufficient).
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrrl}
+\hline
+\textbf{category} & \textbf{n} & \textbf{real} & \textbf{oracleM} & \textbf{oracleC} & \textbf{failures (real)} \\
+\hline
+multi-hop & 10 & 0.500 & 0.700 & 0.800 & \fone{}$\times$5 \\
+temporal & 10 & 0.300 & 0.600 & 0.600 & \ezero{}$\times$3, \fone{}$\times$2, \ffour{}$\times$2 \\
+open-domain & 9 & 0.333 & 0.444 & 0.444 & \fone{}$\times$6 \\
+single-hop & 21 & 0.714 & 0.905 & 0.905 & \fone{}$\times$5, \ffour{}$\times$1 \\
+\hline
+\end{tabular}
+\caption{Study 2C semantic accuracy by LoCoMo category (1=multi-hop,
+2=temporal, 3=open-domain, 4=single-hop). Temporal items are weakest;
+single-hop items, though best, still lose 5/21 to formation.}
+\label{tab:2c-type}
+\end{table}
+
+The shift concerns the retrieval side. In Study 2B the real-memory stage
+recall was 1.0 at retrieval and 0.99 at reranking; on LoCoMo it drops to
+0.61 and 0.53, and retrieval-side failures appear for the first time
+(\ffour{} 12.5\% of answer failures). Long, topically diffuse
+conversations thus move part of the loss downstream of formation: the
+extractor still loses the majority of evidence (formation recall
+0.097), but the subset it does store is no longer always retrievable.
+Lexical false negatives are even stronger here (lexical 28.0\% vs.\
+semantic 52.0\% on real answers), reinforcing that lexical scoring
+would misattribute most of these failures.
 
 \paragraph{Study 2D (cross-model, gemma3:12b).}
 \todo{Fill: same tables under the second answer model; robustness of the
@@ -375,6 +416,20 @@ formed facts, every pre-context stage returns to 1.000 and only three
 context-assembly failures remain. The deficit is therefore almost entirely
 upstream of retrieval: improving rankers or context windows cannot recover
 evidence the extractor never formed.
+
+\paragraph{The boundary moves with workload shape.}
+Study 2C replicates formation dominance on a second benchmark
+(first loss \fone{} 46/50, recall 0.097) and adds a boundary condition:
+on long, topically diffuse multi-session conversations ($\sim$600
+messages/question), part of the loss migrates downstream of formation.
+Retrieval-stage recall falls from 1.000 (Study 2B) to 0.608, reranking
+from 0.987 to 0.527, and \ffour{} appears among answer failures
+(3/24). The attribution protocol makes this shift visible instead of
+averaging it away: formation remains the primary boundary on both
+benchmarks, but its share is a property of the workload, not a
+constant---shorter curated histories lose evidence almost entirely at
+formation, while long conversational histories additionally stress
+retrieval and reranking.
 
 \paragraph{Why end-to-end accuracy misleads.}
 Lexical scoring produces false negatives on concise correct answers, which
