@@ -91,9 +91,18 @@ dominant boundary is *not* the one commonly assumed.
   context p=0.1250 CI [+0.000,+0.217]; first loss F1 45/50; E0 40/8/2;
   answer failures F1 9, E0 7, EVAL 3; per-type: multi-session and
   temporal-reasoning worst (F1×4 each).
-- 5.3 Study 2C ⏳ running (LoCoMo n=50, ~600 msgs/record avg, est. 2-3.5h).
-- 5.4 Study 2D ⏳ pending (gemma3:12b answer model).
-- 5.5 Study 2E ⏳ pending (gemma3:12b judge, 20-record seeded subsample).
+- 5.3 Study 2C ✅ (LoCoMo n=50, 0 errors): real 52.0% vs oracleM 72.0% vs
+  oracleC 74.0%; real vs oracleM p=0.0414 CI [+0.040,+0.360]; real vs
+  oracleC p=0.0266; first loss F1 46/50; NEW: retrieval-side losses appear
+  (retrieval recall 0.61, rerank 0.53, F4 3/24) - boundary shifts downstream
+  on long conversations. Filled into paper with tab:2c-type + analysis para.
+- 5.4 Study 2D ✅ (gemma3:12b answers, n=50, 0 errors): real 59.6% vs
+  oracleM 65.3% vs oracleC 69.4%; real vs oracleM p=0.549 n.s. (advantage
+  compresses under weaker answer model); real vs oracleC p=0.063 c=0;
+  stage recall identical to 2B (formation 0.236, F1 45/50) -> formation
+  boundary is answer-model-independent. Filled into paper.
+- 5.5 Study 2E ⏳ running (gemma3:12b judge re-judging 2B's 20-record seeded
+  subsample; kappa via paired_stats --judge-input).
 
 ## 6. Analysis (2B findings written)
 
