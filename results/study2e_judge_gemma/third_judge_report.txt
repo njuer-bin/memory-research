@@ -1,0 +1,43 @@
+Study 2E third-family blind judge (deepseek-v4.1-flash via opencode.ai/zen gateway)
+n verdicts: 60, errors: 0
+Blind protocol: identical prompt and deterministic rules as primary judge;
+third judge saw only question/answer/gold evidence (no qwen/gemma verdicts,
+no author adjudication, no knowledge that rows were disagreement-selected).
+
+=== THREE-FAMILY AGREEMENT (all 60 verdicts) ===
+qwen2.5:7b vs deepseek:  raw 43/60 = 71.7%, kappa = 0.409
+gemma3:12b vs deepseek:  raw 38/60 = 63.3%, kappa = 0.198
+confusion (qwen, deepseek): {('correct', 'correct'): 32, ('correct', 'incorrect'): 13, ('incorrect', 'incorrect'): 11, ('uncertain', 'incorrect'): 1, ('uncertain', 'correct'): 2, ('incorrect', 'correct'): 1}
+confusion (gemma, deepseek): {('correct', 'correct'): 34, ('correct', 'incorrect'): 19, ('uncertain', 'incorrect'): 2, ('uncertain', 'correct'): 1, ('incorrect', 'incorrect'): 4}
+
+=== THE 16 AUTHOR-ADJUDICATED DISAGREEMENT CASES ===
+qid            mode            qwen   gemma  truth   deepseek  =truth =qwen 
+09d032c9       oracle_context  False  True   correct incorrect no     yes   
+1f2b8d4f       real_memory     None   True   incorrect incorrect yes    no    
+1f2b8d4f       oracle_memory   None   True   correct correct   yes    no    
+1f2b8d4f       oracle_context  False  True   correct correct   yes    no    
+60472f9c       real_memory     True   None   incorrect incorrect yes    no    
+60472f9c       oracle_memory   True   None   incorrect incorrect yes    no    
+6613b389       real_memory     False  True   incorrect incorrect yes    yes   
+6613b389       oracle_context  False  True   incorrect incorrect yes    yes   
+9a707b81       oracle_memory   False  True   incorrect incorrect yes    yes   
+9a707b81       oracle_context  False  True   incorrect incorrect yes    yes   
+a96c20ee       real_memory     False  True   incorrect incorrect yes    yes   
+afdc33df       real_memory     True   False  borderline incorrect no     no    
+afdc33df       oracle_memory   True   False  borderline incorrect no     no    
+gpt4_2ba83207  real_memory     False  True   incorrect incorrect yes    yes   
+gpt4_2ba83207  oracle_context  False  True   incorrect incorrect yes    yes   
+gpt4_f49edff3  real_memory     False  True   incorrect incorrect yes    yes   
+
+deepseek vs author truth (all 16):   13/16
+deepseek vs author truth (decidable): 13/14
+deepseek vs qwen verdict (all 16):    9/16
+deepseek vs gemma verdict (all 16):   4/16
+
+=== THIRD-JUDGE SENSITIVITY (20-record subsample, deepseek verdicts) ===
+real_memory     deepseek 8/20 = 40.0%   | qwen(primary) 14/19 = 73.7%
+oracle_memory   deepseek 13/20 = 65.0%   | qwen(primary) 17/19 = 89.5%
+oracle_context  deepseek 14/20 = 70.0%   | qwen(primary) 14/19 = 73.7%
+
+Author-adjudicated qwen sensitivity (2E primary): real 62.5/81.6/79.2%
+Gemma-judged subsample (2E): see judge_agreement.txt

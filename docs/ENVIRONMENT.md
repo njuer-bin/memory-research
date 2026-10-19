@@ -143,6 +143,37 @@ OLLAMA_EMBEDDING_MODEL=bge-m3:latest SEMANTIC_JUDGE_MODEL=gemma3:12b \
 # (same seed -> same 20 records as the 2B subsample; kappa computed on the pair)
 ```
 
+### Third-family blind judge (revision round 3, 2026-10-19)
+
+Independence control for the author adjudication: a judge from a third
+model family re-judges the same stored answers under the identical prompt
+and deterministic rules, strictly blind (no access to the qwen/gemma
+verdicts, the author adjudication, or the fact that the rows were
+disagreement-selected). Any OpenAI/Anthropic-compatible endpoint works;
+credentials come from the environment and are never written to artifacts.
+
+```bash
+BLIND_JUDGE_BASE_URL="https://opencode.ai/zen/go" \
+  BLIND_JUDGE_API_KEY="<key>" \
+  BLIND_JUDGE_MODEL="deepseek-v4.1-flash" \
+  BLIND_JUDGE_SESSION="ses_2e_blindjudge_001" \
+  python -m experiments.third_judge_blind \
+  --input results/study2b_longmemeval_oracle_n50/comparison.jsonl \
+  --out results/study2e_judge_gemma/third_judge_blind.json
+# --retry-from <artifact> re-requests only failed/missing verdicts (thinking
+# models need max_tokens>=8192; the gateway's WAF rejects the default
+# Python-urllib user agent, so the script sets its own).
+```
+
+Results (60/60 verdicts, 0 errors): DeepSeek reproduces the author
+adjudication on 13/16 disagreement cases (13/14 decidable), agrees with
+qwen on only 9/16 and with gemma on only 4/16, and sides with the
+adjudicated truth against the primary judge in 5 cases — the adjudication
+is not a restatement of the primary judge. The blind judge is itself
+strict (raw agreement 71.7%, kappa=0.409 vs qwen; 63.3%, kappa=0.198 vs
+gemma), so it is used only as an independence check, never as an accuracy
+source. Full table: `results/study2e_judge_gemma/third_judge_report.txt`.
+
 ## Study 2F (extractor ablation: LLM-driven formation, n=50)
 
 ```bash

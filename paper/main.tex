@@ -124,8 +124,10 @@ calibration-period false negatives that pinned the bugs.
 \item \textbf{A judge-reliability study with author adjudication.} We
 measure inter-judge agreement (Cohen's $\kappa$) between two judge models
 on a seeded subsample, adjudicate every disagreement against gold
-evidence, and report how the headline numbers move under the adjudicated
-verdicts (Study 2E). To our knowledge this is the first adjudicated
+evidence under published guidelines, validate the adjudication against a
+third judge family re-judging the same answers strictly blind, and
+report how the headline numbers move under the adjudicated verdicts
+(Study 2E). To our knowledge this is the first adjudicated
 judge-reliability measurement in long-term memory evaluation.
 \item \textbf{An empirical study on two benchmarks, two answer models, and
 two formation extractors,} with paired statistics (exact McNemar, paired
@@ -491,28 +493,46 @@ co-adaptation, and Study 2E directly measures the judge axis.
 
 \paragraph{Study 2E (judge reliability).}
 Gemma3:12b re-judges the stored answers of a seeded 20-record subsample
-of Study 2B (seed 20261018; 55 paired verdicts across the three
-conditions). Raw agreement between the two judge families is 43/55 =
-78.2\%, but Cohen's $\kappa$ over the three-way verdict
-(correct/incorrect/uncertain) is only 0.158---the gap is a prevalence
-effect (41/55 verdicts are agree-correct). Because a low $\kappa$ is
-actionable only if we know \emph{which} judge is right, the authors
-adjudicated all 16 disagreement cases against the gold evidence and
-benchmark reference answers; two preference-type items are
-unadjudicable and excluded. On the 14 decidable cases the qwen2.5:7b
-judge matches the adjudicated truth 8/14 times, the gemma3:12b judge
+of Study 2B (seed 20261018; 55 paired verdicts where both judges
+returned one, 9 more settled by the model-independent deterministic
+channel). Raw agreement is 43/55 = 78.2\%, but Cohen's $\kappa$ over the
+three-way verdict (correct/incorrect/uncertain) is only 0.158---a
+prevalence effect whose structure matters for reading the accuracy
+numbers: the judges are reliable on the consensus majority (41/55
+agree-correct) and unreliable only inside a 14-verdict borderline band,
+concentrated on answers needing a small inference step from the
+evidence. Because a low $\kappa$ is actionable only if we know
+\emph{which} judge is right, the authors adjudicated all 16 disagreement
+cases against gold evidence and benchmark reference answers under
+written guidelines (Appendix~\ref{app:adjudication}); two preference-type
+items are unadjudicable and excluded. On the 14 decidable cases the
+qwen2.5:7b judge matches the adjudicated truth 8/14 times, gemma3:12b
 3/14; gemma's errors are 9 over-acceptances and 0 over-rejections
-(systematic leniency), qwen's are balanced (2/2). Applying the
-adjudicated verdicts to the subsample as a sensitivity analysis moves
-the headline numbers within a band of at most 4.2 points (real memory
-66.0\%$\to$62.5\%, Oracle Memory 83.3\%$\to$81.6\%, Oracle Context
-75.0\%$\to$79.2\%), leaves the condition ordering unchanged, and
-\emph{strengthens} the primary contrast (real vs.\ Oracle Memory:
-$b{=}11$, $c{=}2$, $p{=}0.0225$; was 0.0386). The lifecycle attribution
-is untouched by any of this: stage recall is computed from pipeline
-artifacts, not verdicts, so judge choice cannot move the boundary
-labels---it enters only at the failure/no-failure and E0/EVAL
-boundaries, which is exactly where we report its measured disagreement.
+(systematic leniency), qwen's are balanced (2/2).
+
+\paragraph{Third-family blind validation of the adjudication.}
+The adjudication is itself a measurement, so we validate it against a
+third family that cannot have co-adapted with either primary judge:
+DeepSeek (\texttt{deepseek-v4.1-flash}) re-judges the same 60 answers
+under the identical prompt and deterministic rules, strictly blind---it
+sees only the question, the answer, and the gold evidence; never the
+primary verdicts, the adjudication, or the fact that rows were
+disagreement-selected. It reproduces the adjudication on 13/16 cases
+(13/14 decidable) while agreeing with neither primary judge (9/16 qwen,
+4/16 gemma) and in 5 cases sides with the adjudicated truth
+\emph{against} the primary judge, so the adjudication is not a
+restatement of the qwen verdicts. The blind judge is itself miscalibrated
+($\kappa = 0.409$ vs.\ qwen, 0.198 vs.\ gemma), so it serves only as an
+independence check, never an accuracy source. Applying the adjudicated
+verdicts as a sensitivity analysis moves the headline numbers at most
+4.2 points (real memory 66.0\%$\to$62.5\%, Oracle Memory
+83.3\%$\to$81.6\%, Oracle Context 75.0\%$\to$79.2\%), leaves the
+condition ordering unchanged, and \emph{strengthens} the primary
+contrast (real vs.\ Oracle Memory: $b{=}11$, $c{=}2$, $p{=}0.0225$). The
+lifecycle attribution is untouched: stage recall is computed from
+pipeline artifacts, not verdicts, so judge choice enters only at the
+failure/no-failure and E0/EVAL boundaries, exactly where we report its
+measured disagreement.
 
 \paragraph{Study 2F (extractor ablation, n=50).}
 The decisive external-validity control: the same 50 LongMemEval-s oracle
@@ -690,9 +710,14 @@ agreement ($\kappa{=}0.158$) with a systematic leniency asymmetry
 (gemma3:12b over-accepts). Author adjudication of all 16 disagreements
 shows the primary judge matching adjudicated truth 8/14 times and
 quantifies the effect on headline numbers ($\pm$4 points; ordering
-unchanged, primary contrast strengthened). E0/EVAL outcome counts remain
-judge-dependent, and the adjudication covers only the 20-record
-subsample; full human annotation of all studies is future work.
+unchanged, primary contrast strengthened). The adjudication is itself
+validated against a third judge family re-judging the same answers
+strictly blind (agreement 13/16 with the adjudicated truth, 9/16 with
+the primary judge), which bounds, but does not eliminate, the residual
+concern that the adjudicators were not independent humans. E0/EVAL
+outcome counts remain judge-dependent, and the adjudication covers only
+the 20-record subsample; full human annotation of all studies is future
+work.
 
 \textbf{Benchmark coverage.} LoCoMo category semantics were mapped from
 question inspection and secondary documentation rather than an
@@ -704,50 +729,20 @@ must be anonymized for review per the current call.
 % ---------------------------------------------------------------------------
 \section{Conclusion}
 
-We presented \protocol{}, a frozen protocol that turns a wrong answer into
-a lifecycle attribution, with three oracle controls, measurement-validity
-fixes backed by regression tests, and paired-statistics reporting. On two
-benchmarks and two answer models, the dominant failure boundary is
-formation, not retrieval or reasoning---a conclusion invisible to
-end-to-end accuracy and to attribution instruments that conflate lineage
-with content or lexical with semantic correctness.
-
-% ---------------------------------------------------------------------------
-\section*{Responsible NLP Checklist}
-
-\paragraph{Datasets.} LongMemEval-s \cite{longmemeval} and LoCoMo
-\cite{locomo}, both publicly released for research. We use published
-question-level subsets (LongMemEval-s, LongMemEval oracle subset, LoCoMo)
-and join conversations at load time from the local full data; raw
-benchmark text is not redistributed in the artifact (dataset versions and
-licenses are recorded in the artifact manifest). Both benchmarks contain
-English conversational dialogues; the subset used here contains no
-multi-modal records.
-
-\paragraph{Personal data.} Both benchmarks are synthetic or licensed
-fictional dialogues; no personal data of the authors or annotators is
-used. Speaker names are pseudonyms internal to the benchmarks.
-
-\paragraph{Models and compute.} Answer models \texttt{qwen2.5:7b}
-\cite{qwen25} and \texttt{gemma3:12b}, embedding model \texttt{bge-m3}
-\cite{bge-m3}, all served locally via Ollama with recorded digests. Total
-compute is single-GPU (laptop-class, 8\,GB VRAM); the full pipeline runs
-in a few hours per study.
-
-\paragraph{Intended use and misuse.} The protocol is intended for
-diagnosing memory-system failures in research settings. It is not a
-leaderboard metric: attribution characterizes the concrete implementation
-family under test (rule-based analyzer plus dense retrieval), and
-stage-boundary numbers should not be quoted as properties of other
-architectures. Automated attribution may mislabel cases where gold
-evidence is ambiguous; we therefore report \ezero{} and \evaluncertain{}
-separately instead of forcing a failure label.
-
-\paragraph{Anonymization.} The public artifact will be anonymized for
-review (author-identifying metadata stripped; a separate anonymous branch
-is prepared by \texttt{scripts/make\_anonymous\_branch.sh}, with a
-verification grep and a fresh-repo push recipe for full history
-anonymization); model-server endpoints and paths are scrubbed.
+Where does long-term agent memory actually fail? In the system families
+we measured, the answer moves with the formation stage. Under a
+rule-based extractor the boundary sits at formation (45/50 runs lose
+gold evidence before storage); replace the extractor with an LLM-driven
+one and the same pipeline's boundary relocates downstream, the
+oracle-memory advantage collapsing from $+17.3$ points to zero. That
+mobility, not any single boundary location, answers the title question,
+and it is why the transferable contribution is the protocol rather than
+a boundary claim: \protocol{} turns a wrong answer into a lifecycle
+attribution with three oracle controls, an anti-circular
+evidence-sufficiency gate, regression-tested measurement fixes, an
+adjudicated and blind-validated judge study, and paired statistics---an
+instrument that stays informative when the boundary moves, as end-to-end
+accuracy and lineage-only or lexical-only instruments do not.
 
 % ---------------------------------------------------------------------------
 \bibliographystyle{acl_natbib}
@@ -822,6 +817,40 @@ frozen and regression-tested. The cross-model judge (Study 2E) uses the
 same prompt with \texttt{gemma3:12b}; agreement is reported as Cohen's
 $\kappa$ on the shared subsample.
 
+\section{Adjudication Guidelines}
+\label{app:adjudication}
+
+The 16 disagreement cases of Study 2E were adjudicated by the authors
+against the gold evidence and the benchmark reference answer, under the
+following written criteria, applied identically to every case and blind
+to which judge produced which verdict:
+
+\begin{enumerate}
+\item \textbf{Decidable only on evidence.} A case is decidable only if
+the gold evidence plus the benchmark reference answer determine the
+verdict. If the reference answer is too vague to grade (two
+preference-type items), the case is marked \emph{unadjudicable} and
+excluded from the strict counts rather than forced.
+\item \textbf{Correct iff fully supported.} An answer is correct only if
+every load-bearing claim it makes is supported by the cited gold
+evidence \emph{and} consistent with the reference answer. Concise,
+paraphrased, and answer-equivalent forms count as correct.
+\item \textbf{No unlicensed inference.} An answer that requires a step
+the evidence does not license (a different entity/event assumed
+identical, a superlative supported by a single item, a small arithmetic
+step the reference answer does not itself make) is incorrect. Borderline
+cases are labeled \emph{borderline}, not silently forced.
+\item \textbf{Temporal resolution.} Relative expressions
+(\emph{yesterday}, \emph{last Saturday}) resolve against evidence
+timestamps before grading.
+\item \textbf{Independence check.} The adjudicated verdicts were then
+validated against a third judge family (DeepSeek,
+\texttt{deepseek-v4.1-flash}) re-judging the same answers strictly
+blind; agreement is reported in \S\ref{sec:results} and per-case
+rationales are in the artifact
+(\texttt{results/study2e\_judge\_gemma/adjudication\_report.txt}).
+\end{enumerate}
+
 \section{Stratification Recipes}
 \label{app:stratification}
 
@@ -866,5 +895,42 @@ timings and code commits are recorded in each \verb|summary.json|
 numbers. Every run is followed by \texttt{audit\_embedding\_dims.py}
 to verify the embedding backend served the full run (no silent hash
 degradation).
+
+% ---------------------------------------------------------------------------
+\section*{Responsible NLP Checklist}
+
+\paragraph{Datasets.} LongMemEval-s \cite{longmemeval} and LoCoMo
+\cite{locomo}, both publicly released for research. We use published
+question-level subsets (LongMemEval-s, LongMemEval oracle subset, LoCoMo)
+and join conversations at load time from the local full data; raw
+benchmark text is not redistributed in the artifact (dataset versions and
+licenses are recorded in the artifact manifest). Both benchmarks contain
+English conversational dialogues; the subset used here contains no
+multi-modal records.
+
+\paragraph{Personal data.} Both benchmarks are synthetic or licensed
+fictional dialogues; no personal data of the authors or annotators is
+used. Speaker names are pseudonyms internal to the benchmarks.
+
+\paragraph{Models and compute.} Answer models \texttt{qwen2.5:7b}
+\cite{qwen25} and \texttt{gemma3:12b}, embedding model \texttt{bge-m3}
+\cite{bge-m3}, all served locally via Ollama with recorded digests. Total
+compute is single-GPU (laptop-class, 8\,GB VRAM); the full pipeline runs
+in a few hours per study.
+
+\paragraph{Intended use and misuse.} The protocol is intended for
+diagnosing memory-system failures in research settings. It is not a
+leaderboard metric: attribution characterizes the concrete implementation
+family under test (rule-based analyzer plus dense retrieval), and
+stage-boundary numbers should not be quoted as properties of other
+architectures. Automated attribution may mislabel cases where gold
+evidence is ambiguous; we therefore report \ezero{} and \evaluncertain{}
+separately instead of forcing a failure label.
+
+\paragraph{Anonymization.} The public artifact will be anonymized for
+review (author-identifying metadata stripped; a separate anonymous branch
+is prepared by \texttt{scripts/make\_anonymous\_branch.sh}, with a
+verification grep and a fresh-repo push recipe for full history
+anonymization); model-server endpoints and paths are scrubbed.
 
 \end{document}
