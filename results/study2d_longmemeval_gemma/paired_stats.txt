@@ -1,0 +1,32 @@
+Loaded 50 successful rows from results/study2d_longmemeval_gemma/comparison.jsonl
+
+=== CONDITION ACCURACY (semantic verdict) ===
+real_memory      28/47 = 0.596 (uncertain=3)
+oracle_memory    32/49 = 0.653 (uncertain=1)
+oracle_context   34/49 = 0.694 (uncertain=1)
+
+=== PAIRED TESTS (exact McNemar + paired bootstrap) ===
+real_memory vs oracle_memory: discordant b=7 (only real wrong) c=4 (only oracle wrong), exact p=0.5488
+  delta_acc = +0.064, paired bootstrap 95% CI = [-0.064, +0.213]
+real_memory vs oracle_context: discordant b=5 (only real wrong) c=0 (only oracle wrong), exact p=0.0625
+  delta_acc = +0.106, paired bootstrap 95% CI = [+0.021, +0.191]
+
+=== FAILURE DISTRIBUTION (real_memory) ===
+F1_FORMATION                  13 (59.1%)
+E0_EVIDENCE_INSUFFICIENT       6 (27.3%)
+EVAL_SEMANTIC_UNCERTAIN        3 (13.6%)
+(no failure / correct)        28
+
+=== MEAN STAGE RECALL (gold evidence found) ===
+real_memory      formation=0.236 storage=1.000 evolution=0.236 retrieval=1.000 rerank=0.987 context=0.695
+oracle_memory    formation=1.000 storage=1.000 evolution=1.000 retrieval=1.000 rerank=1.000 context=0.979
+oracle_context   formation=0.000 storage=0.000 evolution=0.000 retrieval=0.000 rerank=0.000 context=1.000
+
+=== BREAKDOWN BY QUESTION TYPE ===
+type                           n   real oracleM oracleC  failures
+knowledge-update               8  0.500   0.625   0.750  E0_EVIDENCE_INSUFFICIENTx1, F1_FORMATIONx3
+multi-session                 13  0.500   0.417   0.583  E0_EVIDENCE_INSUFFICIENTx2, EVAL_SEMANTIC_UNCERTAINx1, F1_FORMATIONx4
+single-session-assistant       6  1.000   1.000   1.000  -
+single-session-preference      3  0.333   0.667   0.667  E0_EVIDENCE_INSUFFICIENTx1, F1_FORMATIONx1
+single-session-user            7  1.000   1.000   1.000  EVAL_SEMANTIC_UNCERTAINx1
+temporal-reasoning            13  0.417   0.538   0.462  E0_EVIDENCE_INSUFFICIENTx2, EVAL_SEMANTIC_UNCERTAINx1, F1_FORMATIONx5

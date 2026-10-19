@@ -53,3 +53,9 @@ results/study2c_locomo_n50/*
 results/study2c_locomo_n50/*
 !results/study2c_locomo_n50/summary.json
 !results/study2c_locomo_n50/paired_stats.txt
+
+# Study 2D: summary + paired stats committed; full jsonl stays a release artifact (I5).
+!results/study2d_longmemeval_gemma/
+results/study2d_longmemeval_gemma/*
+!results/study2d_longmemeval_gemma/summary.json
+!results/study2d_longmemeval_gemma/paired_stats.txt
