@@ -142,3 +142,22 @@ OLLAMA_EMBEDDING_MODEL=bge-m3:latest SEMANTIC_JUDGE_MODEL=gemma3:12b \
 # then: paired_stats.py --judge-input results/study2e_judge_gemma/comparison.jsonl ...
 # (same seed -> same 20 records as the 2B subsample; kappa computed on the pair)
 ```
+
+## Study 2F (extractor ablation: LLM-driven formation, n=50)
+
+```bash
+EXTRACTOR_BACKEND=llm OLLAMA_EMBEDDING_MODEL=bge-m3:latest \
+  ANSWER_MODEL=qwen2.5:7b SEMANTIC_JUDGE_MODEL=qwen2.5:7b \
+  python -m experiments.run_oracle_experiments \
+  --dataset longmemeval_oracle_n50 --limit 50 \
+  --out results/study2f_longmemeval_llm_extractor
+```
+
+`EXTRACTOR_BACKEND=llm` swaps the formation extractor for
+`memory_engine/llm_analyzer.LLMMemoryAnalyzer` (qwen2.5:7b, temperature 0,
+4 messages per call, JSON-only). Everything downstream of formation is
+identical to the rule arm; the runner records per-record extraction
+diagnostics (`llm_calls`, `parse_failures`, `fallback_messages`,
+`skipped_messages`, `facts`) in `comparison.jsonl` and aggregates them in
+`summary.json`. `EXTRACTOR_MODEL` overrides the extractor model;
+`EXTRACTOR_TIMEOUT`/`EXTRACTOR_RETRIES` tune the client.
