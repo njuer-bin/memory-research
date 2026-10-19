@@ -161,3 +161,26 @@ diagnostics (`llm_calls`, `parse_failures`, `fallback_messages`,
 `skipped_messages`, `facts`) in `comparison.jsonl` and aggregates them in
 `summary.json`. `EXTRACTOR_MODEL` overrides the extractor model;
 `EXTRACTOR_TIMEOUT`/`EXTRACTOR_RETRIES` tune the client.
+
+### Study 2F results (completed 2026-10-19, 50/50, 0 errors, 1h34m)
+
+Same 50 LongMemEval-s oracle questions as Study 2B (verified identical
+question_id set and order; gold evidence counts identical, 100 total).
+Extractor is the only varying component.
+
+| metric | rule arm (2B) | LLM arm (2F) |
+|---|---|---|
+| formation stage recall | 0.236 [0.147, 0.331] | **0.838 [0.747, 0.918]** |
+| evolution / context recall | 0.236 / 0.695 | 0.802 / 0.847 |
+| first loss = F1 | 45/50 | 13/50 (none: 5/50 → 29/50) |
+| semantic accuracy real / oracle-M / oracle-C | 66.0 / 83.3 / 75.0% | 70.8 / 71.4 / 70.8% |
+| real vs oracle-M (McNemar) | +0.170, b=10 c=2, p=0.0386 | **+0.000, b=4 c=4, p=1.0000** |
+| attributable failures | F1×9, E0×7, EVAL×3 | E0×6, F6×4, F1×3, EVAL×2, F5×1 |
+
+Extraction diagnostics (LLM arm): 354 calls, 23 parse failures (rule
+fallback, 37 messages, zero silent drops), 1451 facts; formation observes
+2,262 memory items vs 335 under the rule arm (6.8×, median per-question
+ratio). Conclusion: the oracle-memory advantage is a property of the
+extractor, not of the pipeline family — replacing the extractor collapses
+it from +17.3 points to zero and relocates the residual bottleneck to
+benchmark evidence sufficiency (E0) and reasoning (F6).

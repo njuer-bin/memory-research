@@ -132,8 +132,12 @@ two formation extractors,} with paired statistics (exact McNemar, paired
 bootstrap CIs), per-question-type breakdowns, and a cross-model
 replication. The dominant failure boundary is \emph{formation}; reasoning
 failures (F6 candidates) are rare and mostly control failures of the
-oracle conditions. An extractor ablation (Study 2F) shows the boundary is
-a property of the formation stage, not of one rule-based implementation.
+oracle conditions. An extractor ablation (Study 2F) shows the boundary
+is a property of the formation stage, not of one rule-based
+implementation: with an LLM-driven extractor, formation recall rises
+from 0.236 to 0.838 and the oracle-memory advantage collapses from
++17.3 points to zero, relocating the residual bottleneck to benchmark
+evidence sufficiency and reasoning.
 \end{enumerate}
 
 The three-condition design (Real Memory / Oracle Memory / Oracle Context)
@@ -189,9 +193,11 @@ three-way divergence---MemTrace's ``evidence use'', MEMTIER's
 as the central motivation for a protocol: the dominant boundary moves
 with the system under test and the workload shape, so no single pooled
 score can locate it. Our Study 2F isolates exactly this variable by
-swapping the formation extractor inside one fixed pipeline, and Study 2C
-shows the boundary shifting downstream on longer conversations
-(\S\ref{sec:results}). Oracle-style controls are now common in this
+swapping the formation extractor inside one fixed pipeline---the
+oracle-memory advantage collapses from +17.3 points to zero when the
+extractor is replaced, while Study 2C shows the boundary shifting
+downstream on longer conversations (\S\ref{sec:results}). Oracle-style
+controls are now common in this
 literature \cite{memtrace,memtier}; the contribution we claim is not the
 oracle construction itself but the attribution protocol around it.
 
@@ -483,63 +489,60 @@ held fixed across 2B and 2D, so the lifecycle labels---formation
 dominance in particular---cannot be artifacts of judge--answer model
 co-adaptation, and Study 2E directly measures the judge axis.
 
-\paragraph{Study 2F (extractor ablation).}
-Study 2F swaps the formation extractor inside the otherwise identical
-pipeline: an LLM-driven extractor (\texttt{qwen2.5:7b}, prompted to emit
-atomic facts, relations, events, rules, and profiles as JSON, batched
-four messages per call, temperature 0; unparseable batches fall back to
-the rule extractor and are counted) replaces the rule analyzer, and the
-same 50 LongMemEval-s oracle questions run under the full protocol. This
-is the external-validity control the protocol demands: if formation
-dominance is a property of the pipeline boundary rather than of one
-rule-based implementation, the boundary should move when the extractor
-changes. Results in \S\ref{sec:results} below.
-
 \paragraph{Study 2E (judge reliability).}
 Gemma3:12b re-judges the stored answers of a seeded 20-record subsample
 of Study 2B (seed 20261018; 55 paired verdicts across the three
 conditions). Raw agreement between the two judge families is 43/55 =
 78.2\%, but Cohen's $\kappa$ over the three-way verdict
-(correct/incorrect/uncertain) is low: $\kappa = 0.158$. The gap between
-raw agreement and $\kappa$ is a prevalence effect (41/55 verdicts are
-agree-correct), and the disagreements are asymmetric: in 10 of 12
-incorrect-disagreements the stricter qwen2.5:7b judge says
-\emph{incorrect} where gemma3:12b says \emph{correct}, concentrated on
-borderline cases (answers that require a small arithmetic step from the
-evidence, or superlatives supported by a single evidence item); gemma
-also resolves two of qwen's \emph{uncertain} verdicts as correct.
+(correct/incorrect/uncertain) is only 0.158---the gap is a prevalence
+effect (41/55 verdicts are agree-correct). Because a low $\kappa$ is
+actionable only if we know \emph{which} judge is right, the authors
+adjudicated all 16 disagreement cases against the gold evidence and
+benchmark reference answers; two preference-type items are
+unadjudicable and excluded. On the 14 decidable cases the qwen2.5:7b
+judge matches the adjudicated truth 8/14 times, the gemma3:12b judge
+3/14; gemma's errors are 9 over-acceptances and 0 over-rejections
+(systematic leniency), qwen's are balanced (2/2). Applying the
+adjudicated verdicts to the subsample as a sensitivity analysis moves
+the headline numbers within a band of at most 4.2 points (real memory
+66.0\%$\to$62.5\%, Oracle Memory 83.3\%$\to$81.6\%, Oracle Context
+75.0\%$\to$79.2\%), leaves the condition ordering unchanged, and
+\emph{strengthens} the primary contrast (real vs.\ Oracle Memory:
+$b{=}11$, $c{=}2$, $p{=}0.0225$; was 0.0386). The lifecycle attribution
+is untouched by any of this: stage recall is computed from pipeline
+artifacts, not verdicts, so judge choice cannot move the boundary
+labels---it enters only at the failure/no-failure and E0/EVAL
+boundaries, which is exactly where we report its measured disagreement.
 
-\paragraph{Adjudication of the disagreements.}
-Because a low $\kappa$ is only actionable if we know \emph{which} judge
-is right, the authors adjudicated all 16 disagreement cases against the
-gold evidence and benchmark reference answers. Two preference-type items
-were unadjudicable (the reference is too vague to grade) and are
-excluded from the strict count. On the 14 decidable cases the qwen
-judge's verdict matches the adjudicated truth 8/14 times, the gemma
-judge 3/14. The asymmetry is confirmed and sharpened: gemma's errors are
-9 over-acceptances and 0 over-rejections (systematic leniency), while
-the qwen judge's errors are balanced (2 over-acceptances, 2
-over-rejections). Applying the adjudicated verdicts to the 20-record
-subsample (qwen verdicts elsewhere) is a sensitivity analysis for the
-headline numbers: real memory moves from 66.0\% to 62.5\%, Oracle Memory
-from 83.3\% to 81.6\%, Oracle Context from 75.0\% to 79.2\%. The
-condition ordering is unchanged and the primary contrast strengthens:
-real vs Oracle Memory becomes $b{=}11$, $c{=}2$, $p{=}0.0225$ (was
-0.0386), and the marginal real-vs-Oracle-Context contrast becomes
-significant ($b{=}8$, $c{=}1$, $p{=}0.0391$; was 0.125). We report the
-unadjudicated single-judge numbers as primary and the adjudicated
-numbers as this sensitivity analysis.
+\paragraph{Study 2F (extractor ablation, n=50).}
+The decisive external-validity control: the same 50 LongMemEval-s oracle
+questions, the same answer model, judge, embeddings, and lifecycle
+stages---only the formation extractor changes, from the rule analyzer to
+an LLM-driven one. The LLM arm issued 354 extraction calls (23 batches
+unparseable and counted-fallback to the rule extractor, covering 37
+messages; zero silent drops) and the formation stage observes 2{,}262
+memory items against 335 for the rule arm on the same questions
+($6.8\times$, median per-question ratio). Formation recall rises from
+0.236 (CI $[0.147, 0.331]$) to 0.838 (CI $[0.747, 0.918]$), evolution
+recall from 0.236 to 0.802, and context recall from 0.695 to 0.847;
+first loss is \fone{} in 13/50 instead of 45/50, and 29/50 questions
+(was 5/50) now lose no gold evidence at any stage.
 
-Two consequences for the protocol. First, headline semantic accuracy has
-a judge-sensitive borderline band, and single-judge numbers should be
-read with that band in mind. Second, and more importantly, the
-lifecycle attribution that constitutes our main claim is
-judge-independent: stage recall is computed from pipeline artifacts,
-not from verdicts, so the formation-dominance result (first loss
-\fone{} 45/50 in 2B; identical stage recall in 2D) cannot be an
-artifact of judge choice. The judge only enters at the
-failure/no-failure boundary and in the E0/EVAL outcomes, which is
-exactly where we report its measured disagreement.
+The oracle conditions collapse accordingly. Oracle Memory still repairs
+every pre-context stage to 1.000 (context 0.979, three context-assembly
+failures as in 2B), but its answer-level advantage over Real Memory
+disappears: semantic accuracy is 70.8\% (34/48) real vs.\ 71.4\%
+(35/49) oracle memory vs.\ 70.8\% (34/48) oracle context, with
+real-vs-oracle-memory $b{=}4$, $c{=}4$, $p{=}1.0000$, CI $[-0.125,
++0.125]$---against $+0.170$, $p{=}0.0386$ under the rule extractor. The
+attributable failure mix shifts from the evidence side to the
+evaluation side: \fone{} drops from 9 to 3, \ezero{} from 7 to 6, and
+\fsix{} (reasoning candidates: sufficient evidence, full context
+coverage, semantically wrong answer) appears for the first time, 4 cases,
+alongside 2 \evaluncertain{} and 1 \ffive{}. Formation dominance is thus
+a property of the extractor, not of the pipeline: replacing the
+extractor moves the boundary out of formation and leaves a residual
+budget dominated by benchmark evidence sufficiency and reasoning.
 
 % ---------------------------------------------------------------------------
 \section{Analysis}
@@ -571,6 +574,26 @@ constant---shorter curated histories lose evidence almost entirely at
 formation, while long conversational histories additionally stress
 retrieval and reranking.
 
+\paragraph{The oracle gap is a property of the extractor.}
+The most consequential measurement finding of this paper is that the
+oracle-memory advantage is not a constant of the pipeline family. Under
+the rule extractor, Oracle Memory beats Real Memory by $+0.170$
+($p{=}0.0386$); under the LLM extractor, on the same 50 questions, the
+advantage is $+0.000$ ($p{=}1.0000$, CI $[-0.125, +0.125]$). The
+mechanism is visible in the stage chain: the rule arm forms 335 memory
+items and misses 76.4\% of gold evidence before storage; the LLM arm
+forms 2{,}262 items and misses 16.2\%. Once formation recall reaches
+0.838, injecting gold as formed facts adds little the extractor has not
+already captured, so the oracle condition stops discriminating. Two
+implications follow. First, an oracle ablation run on a single extractor
+measures the extractor, not the architecture: effect sizes from
+oracle-style controls are only comparable across systems whose formation
+stages have been characterized. Second, our headline formation dominance
+is explicitly bounded---it holds for the rule arm on both benchmarks and
+is replaced by an evidence-sufficiency/reasoning-dominated residual
+under the LLM arm, which is the honest scope of the claim and the reason
+the extractor axis belongs in any replication of this protocol.
+
 \paragraph{Divergent bottleneck claims in the literature.}
 Recent work on long-term memory diagnosis reports different dominant
 bottlenecks: MemTrace, probing 13 system configurations across four
@@ -583,9 +606,12 @@ pre-population lifting single-session recall to 0.686--0.714
 appears to disagree with both. We read the divergence as the protocol's
 point rather than its refutation: each study measures a different system
 under test, and the dominant boundary is a property of that system's
-formation stage. A rule-based extractor with no recall-oriented training
-loses most evidence before storage; an LLM-driven extractor (Study 2F)
-recovers much of it and moves the boundary downstream; MemTrace's
+formation stage. Study 2F demonstrates this directly inside one
+pipeline: a rule-based extractor with no recall-oriented training loses
+most evidence before storage (formation recall 0.236, oracle-memory
+advantage +17.3 points), an LLM-driven extractor recovers most of it
+(0.838, advantage $+0.0$, CI $[-0.125, +0.125]$) and relocates the
+residual bottleneck to evidence sufficiency and reasoning, and MemTrace's
 systems retrieve evidence but use it poorly. A pooled accuracy score
 cannot distinguish these regimes---which is exactly why the attribution
 instrument, not any single boundary claim, is the transferable
@@ -641,9 +667,13 @@ stages. Formation-boundary numbers characterize this pipeline family,
 not all memory systems; LLM-native systems with learned extraction and
 consolidation (e.g., \cite{mem0,memtier}) may locate their dominant
 boundary elsewhere, and MemTrace's evidence-use finding on 13 system
-configurations \cite{memtrace} is a case in point. We mitigate this by
-measuring the boundary under two extractors and two answer models, and
-by reporting the workload-dependence of the boundary (2B vs.\ 2C), but a
+configurations \cite{memtrace} is a case in point. The ablation bounds
+this concern rather than eliminating it: Study 2F shows the boundary
+relocates (formation 0.236$\to$0.838, oracle advantage $+17.3$
+points$\to$$+0.0$) when the extractor changes, so the transferable claim
+is the protocol and the extractor-dependence of the boundary, not any
+single boundary location. We further report the workload-dependence of
+the boundary (2B vs.\ 2C) and two answer models (2B vs.\ 2D), but a
 broader system sweep is future work.
 
 \textbf{Sample size and statistical power.} $n{=}50$ per benchmark;

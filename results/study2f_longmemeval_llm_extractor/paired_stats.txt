@@ -1,0 +1,25 @@
+Loaded 50 successful rows from results/study2f_longmemeval_llm_extractor/comparison.jsonl
+
+=== CONDITION ACCURACY (semantic verdict) ===
+real_memory      34/48 = 0.708 (uncertain=2)
+oracle_memory    35/49 = 0.714 (uncertain=1)
+oracle_context   34/48 = 0.708 (uncertain=2)
+
+=== PAIRED TESTS (exact McNemar + paired bootstrap) ===
+real_memory vs oracle_memory: discordant b=4 (only real wrong) c=4 (only oracle wrong), exact p=1.0000
+  delta_acc = +0.000, paired bootstrap 95% CI = [-0.125, +0.125]
+real_memory vs oracle_context: discordant b=3 (only real wrong) c=4 (only oracle wrong), exact p=1.0000
+  delta_acc = -0.021, paired bootstrap 95% CI = [-0.128, +0.085]
+
+=== FAILURE DISTRIBUTION (real_memory) ===
+F1_FORMATION                   3 (18.8%)
+F6_REASONING_CANDIDATE         4 (25.0%)
+E0_EVIDENCE_INSUFFICIENT       6 (37.5%)
+EVAL_SEMANTIC_UNCERTAIN        2 (12.5%)
+F5_CONTEXT                     1 (6.2%)
+(no failure / correct)        34
+
+=== MEAN STAGE RECALL (gold evidence found) ===
+real_memory      formation=0.838 storage=1.000 evolution=0.802 retrieval=1.000 rerank=0.993 context=0.847
+oracle_memory    formation=1.000 storage=1.000 evolution=1.000 retrieval=1.000 rerank=1.000 context=0.979
+oracle_context   formation=0.000 storage=0.000 evolution=0.000 retrieval=0.000 rerank=0.000 context=1.000

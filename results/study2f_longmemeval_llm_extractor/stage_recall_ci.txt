@@ -1,0 +1,8 @@
+mode=real_memory  questions=50  bootstrap=10000
+stage          recall               95% CI
+formation       0.838   [0.747, 0.918]
+storage         1.000   [1.000, 1.000]
+evolution       0.802   [0.710, 0.887]
+retrieval       1.000   [1.000, 1.000]
+rerank          0.993   [0.980, 1.000]
+context         0.847   [0.771, 0.915]
