@@ -24,7 +24,17 @@ logger = logging.getLogger(__name__)
 class MemoryEngine:
     def __init__(self, db_path="data/memory.db"):
         self.store = SQLiteStore(db_path)
-        self.analyzer = MemoryAnalyzer()
+        # Formation extractor: rule-based (default) or LLM-driven (Study 2F
+        # ablation arm, EXTRACTOR_BACKEND=llm). Both satisfy the same
+        # analyze()/analyze_many() contract, so everything downstream of
+        # formation (governance, storage, retrieval, attribution) is identical.
+        if os.getenv("EXTRACTOR_BACKEND", "rule").strip().lower() == "llm":
+            from .llm_analyzer import LLMMemoryAnalyzer
+            self.analyzer = LLMMemoryAnalyzer()
+            self.extractor_backend = "llm"
+        else:
+            self.analyzer = MemoryAnalyzer()
+            self.extractor_backend = "rule"
         self.governance = MemoryGovernance(self.store)
         self.embedder = EmbeddingProvider()
         # SQLite 持久化 + 进程级向量索引：Search 热路径不再反复读取/解析 JSON 向量。
@@ -67,7 +77,9 @@ class MemoryEngine:
 
         turn_counter = 0
         for batch_idx, batch in enumerate(batches):
-            for msg_idx, msg in enumerate(batch):
+            # Phase 1: raw memory + embeddings (identical for both extractors).
+            prepared: list[dict[str, Any]] = []
+            for msg in batch:
                 ts = msg.timestamp or now_ms()
                 raw_id = new_id("raw")
                 self.store.insert_raw({
@@ -89,13 +101,35 @@ class MemoryEngine:
 
                 role = (msg.role or "user").strip().lower()
                 source = "system" if role == "system" else ("assistant" if role in {"assistant", "model"} else "user")
-                analyzed = self.analyzer.analyze(
-                    request.user_id, msg.content, ts, source=source,
-                    source_raw_id=raw_id,
-                    source_session_id=request.session_id,
-                    source_turn_id=f"{request.session_id}:turn_{turn_counter}",
-                )
+                prepared.append({
+                    "user_id": request.user_id,
+                    "content": msg.content,
+                    "timestamp": ts,
+                    "source": source,
+                    "source_raw_id": raw_id,
+                    "source_session_id": request.session_id,
+                    "source_turn_id": f"{request.session_id}:turn_{turn_counter}",
+                })
+                turn_counter += 1
 
+            # Phase 2: formation extraction. LLM extractors batch messages into
+            # one model call per group; the rule path keeps per-message calls.
+            analyze_many = getattr(self.analyzer, "analyze_many", None)
+            if analyze_many is not None:
+                analyzed_list = analyze_many(prepared)
+            else:
+                analyzed_list = [
+                    self.analyzer.analyze(
+                        item["user_id"], item["content"], item["timestamp"],
+                        source=item["source"], source_raw_id=item["source_raw_id"],
+                        source_session_id=item["source_session_id"],
+                        source_turn_id=item["source_turn_id"],
+                    )
+                    for item in prepared
+                ]
+
+            # Phase 3: governance + artifact storage (unchanged).
+            for analyzed in analyzed_list:
                 for fact in analyzed["facts"]:
                     inserted, _ = self.governance.accept_fact(fact)
                     if inserted:
@@ -123,7 +157,6 @@ class MemoryEngine:
 
                 for profile in analyzed["profiles"]:
                     self.store.upsert_profile(profile)
-                turn_counter += 1
 
         # request_id was already atomically claimed before processing.
         return True

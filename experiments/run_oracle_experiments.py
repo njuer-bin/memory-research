@@ -414,6 +414,9 @@ def run_record(record: dict[str, Any], idx: int) -> dict[str, Any]:
     search_trace = engine.last_search_trace
     real_context = search_trace.get("context") or real
     judge_gold = _judge_evidence(gold)
+    # Formation-extractor diagnostics (Study 2F ablation arm; empty for rules).
+    extraction_stats = dict(getattr(getattr(engine, "analyzer", None), "stats", None) or {})
+    extraction_backend = getattr(engine, "extractor_backend", "rule")
 
     # Oracle Memory: gold injected as formed memories, then the SAME pipeline.
     log("    [oracle-memory] injecting gold as formed memories")
@@ -479,6 +482,7 @@ def run_record(record: dict[str, Any], idx: int) -> dict[str, Any]:
         "gold_answer": record.get("answer"),
         "modes": {"real_memory": real_mode, "oracle_memory": oracle_memory, "oracle_context": oracle_context},
         "gold_evidence_count": len(gold), "gold_evidence": gold,
+        "extraction": {"backend": extraction_backend, "stats": extraction_stats},
         "code_commit": _commit_hash(),
     }
     return row
@@ -512,13 +516,29 @@ def _context_only_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {"count": count, "stage_recall": {stage: total[stage] / count for stage in STAGES}, "first_loss_distribution": {"not_applicable": count}}
 
 
+def _extraction_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate formation-extractor diagnostics across records (Study 2F)."""
+    backends = {str(r.get("extraction", {}).get("backend", "rule")) for r in rows}
+    backend = backends.pop() if len(backends) == 1 else (sorted(backends) or ["rule"])
+    keys = ("llm_calls", "parse_failures", "fallback_messages", "extracted_messages",
+            "empty_messages", "facts")
+    totals = {k: 0 for k in keys}
+    for r in rows:
+        stats = r.get("extraction", {}).get("stats") or {}
+        for k in keys:
+            totals[k] += int(stats.get(k, 0) or 0)
+    return {"backend": backend, "totals": totals}
+
+
 def _build_summary(dataset: str, limit: int, rows: list[dict[str, Any]], errors: int) -> dict[str, Any]:
     gate_counts: dict[str, int] = {}
     for row in rows:
         status = str(row.get("modes", {}).get("real_memory", {}).get("evidence_sufficiency", {}).get("status") or "unknown")
         gate_counts[status] = gate_counts.get(status, 0) + 1
+    extraction = _extraction_summary(rows)
     return {
         "dataset": dataset, "limit": limit, "records": len(rows), "errors": errors,
+        "extraction": extraction,
         "real_memory": summarize_traces([_mode_trace(r, "real_memory") for r in rows]) if rows else {},
         "oracle_memory": summarize_traces([_mode_trace(r, "oracle_memory") for r in rows]) if rows else {},
         "oracle_context": _context_only_summary(rows),
@@ -534,6 +554,7 @@ def _build_summary(dataset: str, limit: int, rows: list[dict[str, Any]], errors:
         "models": {
             "answer_model": os.getenv("ANSWER_MODEL", "qwen2.5:7b"),
             "semantic_judge_model": os.getenv("SEMANTIC_JUDGE_MODEL", os.getenv("ANSWER_MODEL", "qwen2.5:7b")),
+            "extractor_backend": extraction.get("backend", "rule"),
             "code_commit": _commit_hash(),
         },
         "note": (
