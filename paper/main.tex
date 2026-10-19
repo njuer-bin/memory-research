@@ -304,48 +304,55 @@ and weakest on single-session-user/assistant items (1.0 accuracy in all
 conditions). The pre-fix run (real 58.3\%, oracle memory 72.9\%, oracle
 context 70.2\%) is retained in the artifact as an audit reference only.
 
-\begin{table}[t]
-\centering\small
+\begin{table}[!t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccc}
-\hline
- & \textbf{Real} & \textbf{Oracle Memory} & \textbf{Oracle Context} \\
-\hline
-Semantic accuracy & 31/47 = 66.0\% & 40/48 = 83.3\% & 36/48 = 75.0\% \\
-(uncertain excluded) & & & \\
-Lexical accuracy (report only) & 19/50 = 38.0\% & 22/50 = 44.0\% & 25/50 = 50.0\% \\
+\toprule
+ & \textbf{Real} & \textbf{Oc.\,Mem.} & \textbf{Oc.\,Ctx.} \\
+\midrule
+Semantic accuracy\textsuperscript{*} & 66.0\% & 83.3\% & 75.0\% \\
+Lexical accuracy\textsuperscript{†} & 38.0\% & 44.0\% & 50.0\% \\
+\midrule
 Formation recall & 0.236 & 1.000 & n/a \\
 Storage recall & 1.000 & 1.000 & n/a \\
 Evolution recall & 0.236 & 1.000 & n/a \\
 Retrieval recall & 1.000 & 1.000 & n/a \\
 Rerank recall & 0.987 & 1.000 & n/a \\
 Context recall & 0.695 & 0.979 & 1.000 \\
-First loss = \fone{} & 45/50 & 0/50 & n/a \\
-\hline
+\midrule
+First loss = F1 & 45/50 & 0/50 & n/a \\
+\bottomrule
 \end{tabular}
-\caption{Study 2B (LongMemEval oracle subset, $n{=}50$). Semantic accuracy
-excludes uncertain verdicts from the denominator; lexical accuracy is
-reported for reference only and is never an attribution input.}
+\caption{Study 2B (LongMemEval oracle subset, $n{=}50$). F1 = \fone{}.
+\textsuperscript{*}Semantic accuracy = 31/47, 40/48, 36/48 (uncertain
+verdicts excluded from the denominator). \textsuperscript{†}Lexical
+accuracy = 19/50, 22/50, 25/50, reported for reference only and never an
+attribution input.}
 \label{tab:2b}
 \end{table}
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering\small
+\setlength{\tabcolsep}{6pt}
 \begin{tabular}{lccccc}
-\hline
-\textbf{Question type} & $n$ & \textbf{Real} & \textbf{Oc.\ Mem.} & \textbf{Oc.\ Ctx.} & \textbf{Attributed failures} \\
-\hline
-single-session-user & 7 & 1.000 & 1.000 & 1.000 & \evaluncertain{}$\times$1 \\
+\toprule
+\textbf{Question type} & $n$ & \textbf{Real} & \textbf{Oracle Mem.} & \textbf{Oracle Ctx.} & \textbf{Attributed failures (real)} \\
+\midrule
+single-session-user & 7 & 1.000 & 1.000 & 1.000 & EVAL$\times$1 \\
 single-session-assistant & 6 & 1.000 & 1.000 & 1.000 & --- \\
-single-session-preference & 3 & 0.667 & 0.667 & 0.667 & \ezero{}$\times$1 \\
-knowledge-update & 8 & 0.750 & 0.875 & 0.875 & \fone{}$\times$1, \ezero{}$\times$1 \\
-multi-session & 13 & 0.455 & 0.636 & 0.545 & \fone{}$\times$4, \ezero{}$\times$2, \evaluncertain{}$\times$2 \\
-temporal-reasoning & 13 & 0.462 & 0.846 & 0.615 & \fone{}$\times$4, \ezero{}$\times$3 \\
-\hline
+single-session-preference & 3 & 0.667 & 0.667 & 0.667 & E0$\times$1 \\
+knowledge-update & 8 & 0.750 & 0.875 & 0.875 & F1$\times$1, E0$\times$1 \\
+multi-session & 13 & 0.455 & 0.636 & 0.545 & F1$\times$4, E0$\times$2, EVAL$\times$2 \\
+temporal-reasoning & 13 & 0.462 & 0.846 & 0.615 & F1$\times$4, E0$\times$3 \\
+\bottomrule
 \end{tabular}
-\caption{Study 2B semantic accuracy by question type. Formation failures
-concentrate in multi-session and temporal-reasoning items.}
+\caption{Study 2B semantic accuracy by question type. Failure labels
+abbreviated: F1 = \fone{}, E0 = \ezero{}, EVAL = \evaluncertain{}.
+Formation failures concentrate in multi-session and temporal-reasoning
+items.}
 \label{tab:2b-type}
-\end{table}
+\end{table*}
 
 \paragraph{Study 2C (cross-benchmark, LoCoMo n=50).}
 LoCoMo questions are embedded in much longer multi-session conversations
@@ -363,23 +370,25 @@ again concentrated at formation (\fone{} 46/50; none 1, \ffour{} 2,
 \fone{}$\times$18, \ezero{}$\times$3, \ffour{}$\times$3 (E0 gate: 47
 sufficient, 3 insufficient).
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering\small
-\begin{tabular}{lrrrrl}
-\hline
-\textbf{category} & \textbf{n} & \textbf{real} & \textbf{oracleM} & \textbf{oracleC} & \textbf{failures (real)} \\
-\hline
-multi-hop & 10 & 0.500 & 0.700 & 0.800 & \fone{}$\times$5 \\
-temporal & 10 & 0.300 & 0.600 & 0.600 & \ezero{}$\times$3, \fone{}$\times$2, \ffour{}$\times$2 \\
-open-domain & 9 & 0.333 & 0.444 & 0.444 & \fone{}$\times$6 \\
-single-hop & 21 & 0.714 & 0.905 & 0.905 & \fone{}$\times$5, \ffour{}$\times$1 \\
-\hline
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccccl}
+\toprule
+\textbf{category} & \textbf{n} & \textbf{Real} & \textbf{Oracle Mem.} & \textbf{Oracle Ctx.} & \textbf{failures (real)} \\
+\midrule
+multi-hop & 10 & 0.500 & 0.700 & 0.800 & F1$\times$5 \\
+temporal & 10 & 0.300 & 0.600 & 0.600 & E0$\times$3, F1$\times$2, F4$\times$2 \\
+open-domain & 9 & 0.333 & 0.444 & 0.444 & F1$\times$6 \\
+single-hop & 21 & 0.714 & 0.905 & 0.905 & F1$\times$5, F4$\times$1 \\
+\bottomrule
 \end{tabular}
 \caption{Study 2C semantic accuracy by LoCoMo category (1=multi-hop,
-2=temporal, 3=open-domain, 4=single-hop). Temporal items are weakest;
+2=temporal, 3=open-domain, 4=single-hop); label abbreviations as in
+Table~\ref{tab:2b-type}, F4 = \ffour{}. Temporal items are weakest;
 single-hop items, though best, still lose 5/21 to formation.}
 \label{tab:2c-type}
-\end{table}
+\end{table*}
 
 The shift concerns the retrieval side. In Study 2B the real-memory stage
 recall was 1.0 at retrieval and 0.99 at reranking; on LoCoMo it drops to
@@ -577,20 +586,24 @@ The attribution decision order is frozen in \texttt{docs/PROTOCOL.md} and
 implemented once in \texttt{evaluation/attribution.py}. Lexical scores are
 computed for reporting only and never enter this procedure.
 
+\begingroup\scriptsize
 \begin{verbatim}
-def attribute(answer, gold_evidence, benchmark_answer, stage_artifacts):
-    if semantic_verdict(answer, gold_evidence) == CORRECT:      # (1)
+def attribute(answer, gold, ref, stages):
+    v = verdict(answer, gold)
+    if v == CORRECT:                  # (1)
         return NO_FAILURE
-    if semantic_verdict(answer, gold_evidence) == UNCERTAIN:    # (2)
+    if v == UNCERTAIN:                # (2)
         return EVAL_SEMANTIC_UNCERTAIN
-    if not evidence_sufficient(gold_evidence, benchmark_answer): # (3) E0 gate
+    if not sufficient(gold, ref):     # (3) E0 gate
         return E0_EVIDENCE_INSUFFICIENT
-    for stage in [FORMATION, STORAGE, EVOLUTION,               # (4) F1-F5
+    for stage in [FORMATION,          # (4) F1-F5
+                  STORAGE, EVOLUTION,
                   RETRIEVAL, RERANKING]:
-        if not covers(stage_artifacts[stage], gold_evidence):
+        if not covers(stages[stage], gold):
             return FAILURE_LABEL[stage]
-    return F6_REASONING_CANDIDATE                                # (5)
+    return F6_REASONING_CANDIDATE     # (5)
 \end{verbatim}
+\endgroup
 
 Frozen thresholds: content-preservation check --- shared content
 vocabulary $\geq 50\%$ of the smaller side and $\geq \min(2, |gold|)$
@@ -671,7 +684,7 @@ embedding backend \texttt{bge-m3:latest} (digest \texttt{790764642607},
 1024-dim), all served locally via Ollama with temperature 0. Hardware:
 single laptop GPU (8\,GB VRAM); no distributed inference. Per-study
 timings and code commits are recorded in each \verb|summary.json|
-(\verb|models.code\_commit|); Study 2A/2B ran under commit
+(\verb|models.code_commit|); Study 2A/2B ran under commit
 \texttt{a0fbf66} (post-C8 fix), the strict-mode reruns are the reported
 numbers. Every run is followed by \texttt{audit\_embedding\_dims.py}
 to verify the embedding backend served the full run (no silent hash
