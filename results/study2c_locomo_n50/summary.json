@@ -1,0 +1,122 @@
+{
+  "dataset": "locomo_n50",
+  "limit": 50,
+  "records": 50,
+  "errors": 0,
+  "real_memory": {
+    "count": 50,
+    "stage_recall": {
+      "formation": 0.09666666666666666,
+      "storage": 1.0,
+      "evolution": 0.09666666666666666,
+      "retrieval": 0.6083333333333334,
+      "rerank": 0.5266666666666666,
+      "context": 0.295
+    },
+    "first_loss_distribution": {
+      "formation": 46,
+      "none": 1,
+      "rerank": 1,
+      "retrieval": 2
+    }
+  },
+  "oracle_memory": {
+    "count": 50,
+    "stage_recall": {
+      "formation": 1.0,
+      "storage": 1.0,
+      "evolution": 1.0,
+      "retrieval": 1.0,
+      "rerank": 1.0,
+      "context": 0.977
+    },
+    "first_loss_distribution": {
+      "none": 46,
+      "context": 4
+    }
+  },
+  "oracle_context": {
+    "count": 50,
+    "stage_recall": {
+      "formation": 0.0,
+      "storage": 0.0,
+      "evolution": 0.0,
+      "retrieval": 0.0,
+      "rerank": 0.0,
+      "context": 1.0
+    },
+    "first_loss_distribution": {
+      "not_applicable": 50
+    }
+  },
+  "evidence_sufficiency": {
+    "status_distribution": {
+      "sufficient": 47,
+      "insufficient": 3
+    },
+    "gate": "E0 before F1-F6; uncertain/error cases are EVAL"
+  },
+  "answer_scoring": {
+    "method": "lexical (EM/token-F1, reported only) + semantic judge (attribution input)",
+    "lexical_note": "Lexical correctness is NOT an attribution input; it produces false negatives on concise correct answers.",
+    "real_memory": {
+      "count": 50,
+      "lexical": {
+        "scored": 50,
+        "correct": 14,
+        "accuracy": 0.28,
+        "exact_match": 0.08,
+        "token_f1": 0.23522433181186803
+      },
+      "semantic": {
+        "scored": 50,
+        "correct": 26,
+        "accuracy": 0.52
+      },
+      "model_errors": 0
+    },
+    "oracle_memory": {
+      "count": 50,
+      "lexical": {
+        "scored": 50,
+        "correct": 25,
+        "accuracy": 0.5,
+        "exact_match": 0.26,
+        "token_f1": 0.44131836335304336
+      },
+      "semantic": {
+        "scored": 50,
+        "correct": 36,
+        "accuracy": 0.72
+      },
+      "model_errors": 0
+    },
+    "oracle_context": {
+      "count": 50,
+      "lexical": {
+        "scored": 50,
+        "correct": 26,
+        "accuracy": 0.52,
+        "exact_match": 0.24,
+        "token_f1": 0.4342326543760301
+      },
+      "semantic": {
+        "scored": 50,
+        "correct": 37,
+        "accuracy": 0.74
+      },
+      "model_errors": 0
+    },
+    "first_answer_failure_distribution": {
+      "F1_FORMATION": 18,
+      "E0_EVIDENCE_INSUFFICIENT": 3,
+      "F4_RETRIEVAL": 3
+    }
+  },
+  "models": {
+    "answer_model": "qwen2.5:7b",
+    "semantic_judge_model": "qwen2.5:7b",
+    "code_commit": "f20863e3964408d39af6afb70c5016de93adfebc"
+  },
+  "note": "Evidence lifecycle and answer scoring are reported separately. Before F1-F6 attribution, Gold Evidence is checked for question-answer sufficiency using the benchmark reference answer rather than the Real Memory prediction. Insufficient evidence is E0; uncertain or judge-error cases are EVAL. F6_REASONING_CANDIDATE is assigned only when the gate is sufficient, all gold evidence reaches final context, and the SEMANTIC evaluator (not the lexical scorer) marks the model answer incorrect. Oracle Context remains a reasoning control and its own wrong answer is RC_REASONING_CONTROL_FAILURE."
+}

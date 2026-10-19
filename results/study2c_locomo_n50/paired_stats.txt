@@ -1,0 +1,30 @@
+Loaded 50 successful rows from results/study2c_locomo_n50/comparison.jsonl
+
+=== CONDITION ACCURACY (semantic verdict) ===
+real_memory      26/50 = 0.520 (uncertain=0)
+oracle_memory    36/50 = 0.720 (uncertain=0)
+oracle_context   37/50 = 0.740 (uncertain=0)
+
+=== PAIRED TESTS (exact McNemar + paired bootstrap) ===
+real_memory vs oracle_memory: discordant b=15 (only real wrong) c=5 (only oracle wrong), exact p=0.0414
+  delta_acc = +0.200, paired bootstrap 95% CI = [+0.040, +0.360]
+real_memory vs oracle_context: discordant b=16 (only real wrong) c=5 (only oracle wrong), exact p=0.0266
+  delta_acc = +0.220, paired bootstrap 95% CI = [+0.040, +0.380]
+
+=== FAILURE DISTRIBUTION (real_memory) ===
+F1_FORMATION                  18 (75.0%)
+F4_RETRIEVAL                   3 (12.5%)
+E0_EVIDENCE_INSUFFICIENT       3 (12.5%)
+(no failure / correct)        26
+
+=== MEAN STAGE RECALL (gold evidence found) ===
+real_memory      formation=0.097 storage=1.000 evolution=0.097 retrieval=0.608 rerank=0.527 context=0.295
+oracle_memory    formation=1.000 storage=1.000 evolution=1.000 retrieval=1.000 rerank=1.000 context=0.977
+oracle_context   formation=0.000 storage=0.000 evolution=0.000 retrieval=0.000 rerank=0.000 context=1.000
+
+=== BREAKDOWN BY QUESTION TYPE ===
+type                           n   real oracleM oracleC  failures
+1                             10  0.500   0.700   0.800  F1_FORMATIONx5
+2                             10  0.300   0.600   0.600  E0_EVIDENCE_INSUFFICIENTx3, F1_FORMATIONx2, F4_RETRIEVALx2
+3                              9  0.333   0.444   0.444  F1_FORMATIONx6
+4                             21  0.714   0.905   0.905  F1_FORMATIONx5, F4_RETRIEVALx1
