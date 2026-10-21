@@ -138,7 +138,17 @@ F2 Validity：§3.2 配对构造；F3 Type：§4 三模板；F4 Budget ∈ {1,3}
    校准决策：**匹配队列共享协变量**（否则 V-revived 差分保留噪声 ~0.5pp
    淹没 ±0.3 容差）+ **V-revived 成对批次脱落**（消除差分保留噪声）；
    队列名池避开 `theta`（与 θ₁ 记号混淆））
-2. V10 人工盲评包（COND-MINUS 模板 × 实例抽样）
+2. ✅ V10 人工盲评包（`experiments/kwm_v10_blindpack.py --build` →
+   `data/kwm_v10_blindpack/`）：30 条匿名条目（COND×12 / COND-MINUS×12 /
+   UNCOND×6，固定种子 20261021 洗牌）；COND 与 COND-MINUS 按种子**成对**
+   （同事故事实、不同尾部）——配对使判定更敏感，保守方向。
+   阈值评分前冻结：COND q1=Y ≥11/12、COND-MINUS q1=N ≥11/12、
+   UNCOND q1=N ≥5/6、评分者间 q1 一致率 ≥90%（kappa 报告不设门）；
+   任一不满足 → 修 filler → 新构建轮次重评。
+   组成 ③ 工件留痕：`provenance.json`（种子清单、生成器 sha256、git commit、
+   变更记录）+ 评分落盘 `score_*.json`。
+   评分路径冒烟测试通过（模拟答卷全绿后已删除，不污染真实盲评）；
+   **待两名人类评分者独立作答**（`INSTRUCTIONS.md`）。
 3. V8/V9 预跑脚本（复用 kwm_common 三协议客户端）
 4. 功效分析（按校准后的效应量）
 5. 用户拍板规模参数 → 协议冻结 commit 预注册
