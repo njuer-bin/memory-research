@@ -1,0 +1,12 @@
+{
+  "family": "B",
+  "condition": "COND_MINUS",
+  "variant": null,
+  "content": "在 pandas 1.5.3 环境下对含 12% 无法解析时间字符串的 ts 列直接 groupby 按月汇总，无法解析的行被静默丢弃，汇总总额 44.0 万，漏计约 12%。本记录由自动化抽取生成，原始会话日志保留在备份卷；如需追溯请按会话标识检索。（数据导出记录见项目目录）（数据导出记录见项目目录）（数据导出记录见项目目录）",
+  "source": "前段轨迹",
+  "metadata": {
+    "kwm_category": "FAIL",
+    "family": "B",
+    "source": "前段轨迹"
+  }
+}

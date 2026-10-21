@@ -1,0 +1,12 @@
+{
+  "family": "C",
+  "condition": "COND",
+  "variant": null,
+  "content": "在 db_v1 中 customers.customer_id 存在重复行（18% 客户有大小写变体），直接按 customer_id join 后按 name 汇总会使订单扇出重复，合计虚增约 19%（59280）。【适用条件】上述结论仅在 customer_id 存在重复行时成立；若上游修复唯一性（customer_id 唯一），结论失效。",
+  "source": "前段轨迹",
+  "metadata": {
+    "kwm_category": "FAIL",
+    "family": "C",
+    "source": "前段轨迹"
+  }
+}
