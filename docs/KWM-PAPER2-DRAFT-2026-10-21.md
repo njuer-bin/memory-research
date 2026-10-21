@@ -1,13 +1,14 @@
 # Diagnosing a Failed Confirmatory Pilot for Paired Validity Manipulations of Agent Failure Memory
 
-**Tech report draft v0.4 (2026-10-21; supersedes v0.3 after third external review)**
+**Tech report draft v0.5 (2026-10-21; supersedes v0.4 after fourth external review)**
 
 > **Status**: DRAFT — internal diagnostic record, not submission-ready.
 > **What this document is**: the record of a pre-registered confirmatory pilot that
 > failed to produce its pre-registered effect, the diagnostic exploration that
-> followed, and a retroactive outcome-layer (L3) scoring of **all 43 runs**
-> (10 surviving JSONs + 33 reconstructed from retained logs).
-> **What this document is not**: it does not establish that "the memory-value window
+> followed, and a retroactive outcome-layer (L3) scoring of **all 43 traceable
+> execution traces** (10 surviving JSONs + 33 reconstructed from retained logs;
+> "traces" throughout: a count of recoverable executions, not a sample size — §6.5).
+> **What this document is not**: it does not establish that "the memory utility window
 > is empty" (Section 7 states this as a *hypothesis with a concrete test design*),
 > does not claim a structural defect of any research program, does not claim
 > primacy for the instrument, and **does not claim that the pre-registered primary
@@ -23,10 +24,15 @@
 > evidence–claim reconciliation against the retained logs** (C1–C3 below; audit in
 > `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md`): the confirmatory pilot's behavior
 > description, the Gemma multi-attempt outcome, and the Gemma rule-variant outcome.
-> v0.4 (this version) adds a machine-generated **unique run manifest** (43 rows;
+> v0.4 adds a machine-generated **unique run manifest** (43 rows;
 > disjoint JSON/log-only evidence pools verified; Appendix A) and bounds every
 > inventory-wide claim to the 43 traceable runs; capability-tier labels are replaced
 > by model names; all claim strengths are aligned with n=1 evidence.
+> v0.5 (this version) renames the hypothesis to the **memory utility window** with a
+> formal definition (ΔU and the Novelty × Actionability 2×2, §7.2), replaces
+> mechanism-laden phrasing ("strategy inertia") with behavioral-invariance wording,
+> and fixes inventory-wide counts as **execution traces** rather than a sample size
+> (§6.5).
 
 ---
 
@@ -47,7 +53,7 @@ harness that makes method choice an explicit logged decision — and ran the
 pre-registered confirmatory pilot on the family with the cleanest statistical
 contrast.
 
-The pilot triggered its pre-registered behavioral stopping gate: among the 43 traceable runs of the
+The pilot triggered its pre-registered behavioral stopping gate: among the 43 traceable execution traces of the
 reconciled inventory, the directional contrast the design hinges on (UNCOND vs.
 NONE, expected to reverse across validity variants) was never observed — two early
 ladder variants without retained artifacts are excluded from this statement and
@@ -60,7 +66,7 @@ observations do not identify an effect attributable to applicability information
 they neither establish such an effect nor rule one out. Under the
 single-commitment budget no run could, by construction, switch after a failed
 attempt; under multi-attempt budgets runs could and sometimes did. Retroactive
-scoring of all 43 runs against the frozen outcome checkpoints shows
+scoring of all 43 execution traces against the frozen outcome checkpoints shows
 DeepSeek-V4.1-Flash deterministically passes V-dead and fails V-revived (it
 commits its single attempt to a tool that crashes under revival), while
 Qwen2.5-7B's unreflective default is exactly correct under revival and biased under
@@ -72,7 +78,7 @@ contrast *memory + instruction* against *no memory*, not memory content alone
 We contribute: (1) a reusable, gate-verified instrument for paired validity
 manipulations of failure memory (released with all traces); (2) a documented
 negative confirmatory pilot with a complete, reconciled diagnostic trail; and
-(3) a precisely stated hypothesis — the *memory-value window*: a memory can only add
+(3) a precisely stated hypothesis — the *memory utility window*: a memory can only add
 decision value when the agent neither already knows the lesson nor lacks the
 capability to act on it — together with a proposed confirmatory protocol (draft,
 to be pre-registered before any run: task-private information, uniform base
@@ -115,11 +121,11 @@ in an instructive way, and this report is organized around that failure:
 
 - **Section 4–5** document the instrument and the pilot protocol.
 - **Section 6** rebuilds the result matrix from primary artifacts (run JSONs and
-  retained logs — all 43 runs inventoried, 43 scored or explicitly marked
+  retained logs — all 43 traces inventoried, 43 scored or explicitly marked
   unjudgeable/unverifiable), and separates the confirmatory pilot from the
   exploratory diagnostics.
 - **Section 7** extracts what the failure *does* and *does not* license us to say,
-  and states the hypothesis-level takeaway (the memory-value window) with the design
+  and states the hypothesis-level takeaway (the memory utility window) with the design
   that would test it.
 
 **Contributions.**
@@ -131,11 +137,11 @@ in an instructive way, and this report is organized around that failure:
    gate checks V1–V6.
 2. **A documented negative confirmatory pilot with a reconciled evidence trail**:
    the pre-registered directional contrast (UNCOND vs. NONE) was not observed in
-   any of the 43 traceable runs (uniqueness machine-verified; disjoint evidence
+   any of the 43 traceable execution traces (uniqueness machine-verified; disjoint evidence
    pools); the full inventory is scored under frozen checkpoints or explicitly
    marked unjudgeable; the gaps between earlier draft narratives and the primary
    artifacts are documented as corrections rather than silently patched.
-3. **A hypothesis with a test design**: the *memory-value window* — memory adds
+3. **A hypothesis with a test design**: the *memory utility window* — memory adds
    decision value only where (i) the lesson is absent from model weights and (ii) the
    agent can act on the memory — plus a proposed confirmatory protocol (draft,
    pending pre-registration) targeting task-private information domains with
@@ -273,7 +279,7 @@ design (point estimate within tolerance as a hard requirement; CI, semantic
 consistency, and cost as weighted additions) and additionally requires automated
 scoring-field tests proving that every permitted method emits every field the
 scoring protocol consumes — or a pre-registered interpretation of absent fields —
-before any confirmatory run (see the protocol v2 document).
+before any confirmatory run (see the protocol v2.1 document).
 
 ### 3.4 Primary endpoint vs. stopping gate (separation added in v0.3)
 
@@ -368,7 +374,7 @@ caution while the memory content pushes the other way. We did not intend this as
 manipulated factor; it is a design flaw w.r.t. the stated question. The next-round
 protocol renders a structurally identical prompt in every condition (NONE receives
 an explicitly empty memory slot plus the same usage rule), making the memory payload
-the only difference — see the protocol v2 document.
+the only difference — see the protocol v2.1 document.
 
 ### 4.5 Pre-run gates
 
@@ -492,8 +498,9 @@ pre-register and manipulate — not as an identified cause of model behavior.
 
 Three observations, each verified against the JSONs: (i) the choice is *invariant
 across all four memory conditions* — including NONE (`memory_injected: False`) — so
-the model's behavior is a **mechanical preference for the robust tool**
-(strategy inertia / over-generalization), *not* condition adaptation and *not*
+the model's behavior is **behavioral invariance across memory conditions** (a fixed
+robust-tool preference; the mechanism behind the invariance is not established by
+this data), *not* condition adaptation and *not*
 demonstrably "prior knowledge covers the memory's value"; (ii) in V-revived the
 chosen tool is **not** the optimal method — the naive method would have passed the
 frozen checkpoints (dev −0.218 ≤ 0.3) — so DeepSeek-V4.1-Flash deterministically
@@ -507,7 +514,7 @@ CI [7.0432, 9.1670] (N=1440); the UNCOND final answer cites the memory ("历史�
 表明此方法的偏差约为 6.0pp") *while adopting the biased estimate* — the
 acknowledge-but-not-act pattern.
 
-### 6.4 Retroactive L3 scoring — all 43 runs
+### 6.4 Retroactive L3 scoring — all 43 execution traces
 
 **Scoring coverage.** (a) 10 surviving JSONs: `experiments/kwm_score_retro.py` →
 `l3_scoring_retroactive.json`. (b) 33 log-only runs (JSONs overwritten or never
@@ -564,9 +571,9 @@ with* harness budget structure and model identity — factors that were never cr
 in a full factorial design, so the correspondence is not a causal attribution.
 The places where memory conditions diverged (pilot COND/COND-MINUS vs. UNCOND;
 Gemma row 3) are n=1, unpredicted, and do not identify a content effect
-(COND-MINUS ≡ COND; NONE moves too). Among the 43 traceable runs: (1) the
+(COND-MINUS ≡ COND; NONE moves too). Among the 43 traceable execution traces: (1) the
 UNCOND-vs-NONE contrast was never observed; (2) prospective use of the
-applicability condition occurred in zero of 43 runs; (3) switching is absent
+applicability condition occurred in zero of 43 traces; (3) switching is absent
 exactly where the single-commitment design forbids it and present where
 multi-attempt budgets allow it — a design-property correspondence, not a finding
 about model reasoning; (4) DeepSeek-V4.1-Flash deterministically fails the revived
@@ -577,7 +584,11 @@ budget — recovers to X after the same crash.
 
 - The confirmatory pilot is one family (A), one model, n=1 per cell. The diagnostics
   are exploratory, adaptive, and non-poolable.
-- Run uniqueness is machine-verified (manifest, §6.4): 43 unique runs, disjoint
+- **"43" is a count of traceable execution traces, not a sample size.** The traces
+  span non-factorial harness variants, three models, and adaptive sequences, with
+  n=1 cells and log reconstruction; they are never pooled for inference. We use
+  "execution traces" (not "n=43") throughout.
+- Run uniqueness is machine-verified (manifest, §6.4): 43 unique traces, disjoint
   JSON/log-only evidence pools, group totals regenerable from the manifest alone.
 - Model attribution relies on logs because the runner omitted the model field
   (defect recorded, Section 5); attribution is unambiguous for the surviving JSONs,
@@ -595,7 +606,7 @@ budget — recovers to X after the same crash.
 ### 7.1 What this pilot does and does not establish
 
 **Does not establish**: that failure memory cannot help agents; that the
-memory-value window is empty in general; that the manipulation is structurally
+memory utility window is empty in general; that the manipulation is structurally
 infeasible; that any model "already knows" the lesson; **or that the pre-registered
 primary outcome H-A has been tested to a negative conclusion** — the pilot stopped
 at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4).
@@ -603,7 +614,7 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
 **Does support (as observations, within scope)**:
 
 1. The pre-registered contrast (UNCOND vs. NONE) was not observed in any of the 43
-   traceable runs across all harness variants and all three models (two early variants
+   traceable execution traces across all harness variants and all three models (two early variants
    without retained artifacts are excluded from this statement and marked
    unverifiable). Whatever would mediate the designed memory→behavior transfer, no
    traceable configuration engaged it.
@@ -614,7 +625,7 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
    identity — factors never crossed factorially, so this is a correspondence, not
    a causal attribution.
 3. Prospective use of applicability conditions occurred in zero of the 43 traceable
-   runs in any model: no run inferred from COND that the feared path had become safe
+   execution traces in any model: no run inferred from COND that the feared path had become safe
    before choosing. The closest behaviors are post-hoc: DeepSeek-V4.1-Flash's honest
    post-crash report; Gemma3-12B's post-crash inference that "the missingness
    pattern changed" (which it used to justify caution, not to conclude the path was
@@ -630,40 +641,67 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
    independent factor in future designs rather than explaining behavior by it post
    hoc.
 
-### 7.2 The memory-value window: a hypothesis, with a test
+### 7.2 The memory utility window: a hypothesis, with a test
 
-The observations motivate a precisely stated hypothesis:
+The observations motivate a precisely stated hypothesis. Failure memory is one
+instance of *negative/corrective memory*; the hypothesis is stated for retrieved
+memory in general, with failure memory as the experimental scenario.
 
-> **H-window**: A failure memory can add decision value only for agents that
-> (i) do not already encode the lesson (otherwise the memory is redundant) and
-> (ii) can act on memory instructions (otherwise the memory is inert). On the
-> tested axis these populations did not overlap.
+> **Memory Utility Window (MUW; previously H-window)**. For a retrieved memory *M*
+> and agent *A* on task distribution *T*, define the utility gain
+> ΔU(M) = U(A | M) − U(A | ∅). A memory can add decision value (ΔU > 0) only where
+> two latent properties jointly hold:
+> - **Novel(M)** — the memory's lesson is *not* already encoded in the agent's
+>   weights (otherwise the memory is redundant);
+> - **Actionable(M)** — the agent can act on memory instructions (otherwise the
+>   memory is inert).
+>
+> |  | Actionable | Not actionable |
+> |---|---|---|
+> | **Novel** | *utility window* (ΔU > 0 possible) | inert |
+> | **Known** | redundant | inert |
+>
+> On the tested axis these populations did not overlap.
 
 Status: **hypothesis, not finding.** Neither conjunct has been independently
-measured — (i) is inferred indirectly and unfalsifiably from behavior (a model that
-ignores a memory may know the lesson *or* may fail to use memories at all), and the
-pilot is equally consistent with strategy inertia, tool preference, or budget
-effects. The concrete test follows from the diagnosis and is now specified as a
-protocol (v2): rebuild the natural default around information that is *absent from
+measured — Novel(M) is inferred indirectly and unfalsifiably from behavior (a model
+that ignores a memory may know the lesson *or* may fail to use memories at all), and the
+pilot is equally consistent with a fixed tool preference, strategy rigidity, or budget
+effects.
+
+Read against the measurement chain L1 → L2 → L3 (memory available → memory changes
+behavior → behavior improves outcome), the inventory exhibits a break at *every*
+link: **L1 without L2** — Qwen2.5-7B cites the memory ("historical experience
+shows ~6.0pp bias") while adopting the biased method, i.e. recognition without
+utilization; **L2 without content attribution** — method movement occurs in COND,
+COND-MINUS, and NONE cells, so movement alone is insufficient evidence for
+memory-content utilization; **L2/L3 without prospective discrimination** —
+DeepSeek-V4.1-Flash holds a conditional memory yet never infers the validity change
+before choosing. These breaks, not the window's emptiness, are this report's core
+observations.
+
+The concrete test follows from the diagnosis and is now specified as a
+protocol (v2.1): rebuild the natural default around information that is *absent from
 model weights by construction* — project-private parameters, randomly generated
 environment conventions, or session-local state, regenerated per instance — while
 holding task structure, models, and harness fixed, with uniform base prompts across
 conditions (§4.4 confound removed). Under that design, a NONE-condition agent cannot
-succeed by prior knowledge, so condition (i) holds by construction and the
+succeed by prior knowledge, so Novel(M) holds by construction and the
 manipulation tests the memory's *incremental* value rather than re-testing textbook
 statistics.
 
-Because neither conjunct of H-window is measured by the main manipulation alone,
-the proposed protocol (v2) adds two dedicated checks, one per conjunct:
+Because neither conjunct of MUW is measured by the main manipulation alone,
+the proposed protocol (v2.1) adds two dedicated controls, one per conjunct:
 
-- **(a) Information-unobtainability check (conjunct i).** Every task instance's
+- **(a) Novelty control** (information-unobtainability; conjunct i). Every task
+  instance's
   project rules/parameters are randomly generated per instance, with the generation
   seed, the prior environment, and the change record retained as artifacts; task
   descriptions and tool interfaces are audited so the instance-level answer cannot
   be leaked through the prompt or inferred from fixed tool names. This makes "the
   memory carries instance-level information absent from the weights" verifiable
   rather than assumed.
-- **(b) Positive control for memory-use ability (conjunct ii).** A separate
+- **(b) Actionability control** (positive control for memory-use; conjunct ii). A separate
   condition in which the memory is unambiguous, correct, and clearly applicable to
   the current task. A model that cannot act on memory even under this condition
   should not have the main experiment's null result interpreted as "the memory
@@ -672,13 +710,13 @@ the proposed protocol (v2) adds two dedicated checks, one per conjunct:
 
 Testing the two conjuncts separately has more explanatory power than comparing
 "weaker" and "stronger" models. The full design is the proposed confirmatory
-protocol (draft v2, pending pre-registration); it reuses the released instrument
+protocol (draft v2.1, pending pre-registration); it reuses the released instrument
 except for the task families' information content and the prompt structure.
 
 ### 7.3 Consilience with prior observations
 
 BASM's unexplained App.-Skill dip (−5.95pp on a 32B model, +7.14pp on a 14B model)
-is *consistent with* H-window — conditioning information being load-bearing for one
+is *consistent with* MUW — conditioning information being load-bearing for one
 model and redundant-or-encumbering for another — but our pilot does not explain it;
 establishing that link requires the confirmatory experiment above. MCMA's
 environment-dependent copilot harm and [2607.08716]'s Injection-only −6.0pp are
@@ -727,12 +765,12 @@ these works measured wrong abandonment of revived paths.
    method (instrument gap; frozen implementations must not be edited post hoc, so
    this is recorded rather than patched).
 6. **Model attribution is log-reconstructed** (runner defect, Section 5); JSONs were
-   overwritten across harness variants, so 33 of 43 runs are scored from logs, and
+   overwritten across harness variants, so 33 of 43 traces are scored from logs, and
    two ladder claims (rows 2 and 5) are unverifiable for lack of any retained
    artifact.
 7. **Memories were injected verbatim** with dense-retrieval logging; no consolidation
    noise. Findings concern memory *use*, not *formation*.
-8. **Neither conjunct of H-window is independently measured in this data**: "knowledge
+8. **Neither conjunct of MUW is independently measured in this data**: "knowledge
    absent from weights" is inferred indirectly (a NONE-condition failure can also
    mean the model cannot execute the task or cannot use memories), and no positive
    control for memory-use ability exists. The proposed protocol adds both checks
@@ -748,18 +786,18 @@ these works measured wrong abandonment of revived paths.
 
 We built and released a gate-verified instrument for paired validity manipulation of
 agent failure memory and ran the pre-registered confirmatory pilot, which triggered
-its pre-registered behavioral stopping gate: among the 43 traceable runs of the
+its pre-registered behavioral stopping gate: among the 43 traceable execution traces of the
 reconciled inventory (uniqueness machine-verified; two early variants without
 retained artifacts excluded as unverifiable), the designed directional contrast
 never appeared. A full evidence–claim reconciliation against retained artifacts
-scored all 43 runs (or marked them unjudgeable/unverifiable) and corrected three
+scored all 43 traces (or marked them unjudgeable/unverifiable) and corrected three
 residual narrative errors from earlier drafts; the surviving observations are
-narrow — no UNCOND-vs-NONE contrast among the traceable runs, zero prospective use
+narrow — no UNCOND-vs-NONE contrast among the traceable execution traces, zero prospective use
 of applicability conditions, and behavior that *corresponds with* budget structure
 and model identity (non-causally: the factors were never crossed) rather than
 evidence identifying memory-content effects. We report the failure with its
 complete diagnostic trail, a disclosed treatment confound, and a precisely stated
-hypothesis — the memory-value window — together with a proposed confirmatory
+hypothesis — the memory utility window — together with a proposed confirmatory
 protocol (draft, pending pre-registration) with per-conjunct validity checks that
 would test it. The instrument, the negative result, and the correction history
 (v0.1's strong-model mischaracterization; v0.3's three log-based corrections) are
@@ -768,7 +806,7 @@ released in full.
 **Artifacts**: simulators and gold standards (3 families), nine frozen record
 templates + contamination checker, trap tools, method-menu agent + runner,
 retroactive scorers (JSON + log-only), the unique run manifest, all run JSONs,
-retained execution logs, the evidence audit, the protocol v2 draft, and the
+retained execution logs, the evidence audit, the protocol v2.1 draft, and the
 decision record (master design doc v2.4, task-set v1, harness change log, stage-A
 closure report + errata).
 
@@ -825,7 +863,7 @@ closure report + errata).
 ## Appendix B — Decision record
 
 1. Stop-loss chosen over SOP-conflict redesign (different construct) and over
-   private-information rebuild (now specified as protocol v2, the H-window test).
+   private-information rebuild (now specified as protocol v2.1, the MUW test).
 2.    Cloud-model option was exercised before stop-loss — it produced the corrected
    DeepSeek data, not a rescue.
 3. L3 scoring was retroactively completed for all surviving runs after external
@@ -849,3 +887,13 @@ closure report + errata).
    property; G-core is framed strictly as a pilot-stopping decision; the next-round
    design is relabeled "proposed confirmatory protocol (draft, pending
    pre-registration)" and gains per-conjunct H-window validity checks (§7.2).
+7. v0.5 (fourth review): the hypothesis is formalized and renamed the **memory
+   utility window (MUW)** — ΔU(M) = U(A|M) − U(A|∅), gated by Novel(M) ∧
+   Actionable(M), with the Novelty × Actionability 2×2 (§7.2); "strategy inertia"
+   is replaced by behavioral-invariance wording (invariance observed, mechanism not
+   established); inventory-wide counts are relabeled **execution traces**, never a
+   sample size (§6.5); the L1→L2→L3 break-down (recognition without utilization;
+   movement without content attribution; access without prospective discrimination)
+   is added as the report's core observational framing; failure memory is
+   positioned as one instance of negative/corrective memory; the next-round design
+   is protocol v2.1 (four-factor factorial, §7.2 pointer updated).
