@@ -19,7 +19,7 @@
 > no retained artifacts are marked *unverifiable* (Section 6.2).
 > **Correction log**: v0.1 mischaracterized the strong model's behavior; v0.2
 > rebuilt the matrix and added retroactive L3 scoring for the 10 surviving runs.
-> v0.3 (this version) corrects **three further factual errors found by a full
+> v0.3 corrects **three further factual errors found by a full
 > evidence–claim reconciliation against the retained logs** (C1–C3 below; audit in
 > `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md`): the confirmatory pilot's behavior
 > description, the Gemma multi-attempt outcome, and the Gemma rule-variant outcome.
@@ -52,7 +52,7 @@ reconciled inventory, the directional contrast the design hinges on (UNCOND vs.
 NONE, expected to reverse across validity variants) was never observed — two early
 ladder variants without retained artifacts are excluded from this statement and
 marked unverifiable (§6.2). A subsequent adaptive diagnostic across harness
-variants and three model tiers (Qwen2.5-7B, Gemma3-12B, DeepSeek-V4.1-Flash) —
+variants and three models (Qwen2.5-7B, Gemma3-12B, DeepSeek-V4.1-Flash) —
 reported here as *exploratory*, not confirmatory evidence — never produced that
 contrast either. Where method choice *did* move, the observed movement was
 identical between COND and COND-MINUS in the relevant cells; these single-run
@@ -603,7 +603,7 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
 **Does support (as observations, within scope)**:
 
 1. The pre-registered contrast (UNCOND vs. NONE) was not observed in any of the 43
-   traceable runs across all harness variants and model tiers (two early variants
+   traceable runs across all harness variants and all three models (two early variants
    without retained artifacts are excluded from this statement and marked
    unverifiable). Whatever would mediate the designed memory→behavior transfer, no
    traceable configuration engaged it.
@@ -614,7 +614,7 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
    identity — factors never crossed factorially, so this is a correspondence, not
    a causal attribution.
 3. Prospective use of applicability conditions occurred in zero of the 43 traceable
-   runs at any tier: no run inferred from COND that the feared path had become safe
+   runs in any model: no run inferred from COND that the feared path had become safe
    before choosing. The closest behaviors are post-hoc: DeepSeek-V4.1-Flash's honest
    post-crash report; Gemma3-12B's post-crash inference that "the missingness
    pattern changed" (which it used to justify caution, not to conclude the path was
@@ -826,8 +826,8 @@ closure report + errata).
 
 1. Stop-loss chosen over SOP-conflict redesign (different construct) and over
    private-information rebuild (now specified as protocol v2, the H-window test).
-2. Cloud-model option was exercised before stop-loss — it produced the corrected
-   ceiling-tier data, not a rescue.
+2.    Cloud-model option was exercised before stop-loss — it produced the corrected
+   DeepSeek data, not a rescue.
 3. L3 scoring was retroactively completed for all surviving runs after external
    review #1 identified the gap between the pre-registered primary outcome and the
    v0.1 report; after external review #2, scoring was extended to all 33 log-only
