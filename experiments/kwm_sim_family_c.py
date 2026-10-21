@@ -27,21 +27,34 @@ DUP_FRACTION = 0.18
 
 def build() -> dict:
     rng = np.random.default_rng(SEED)
-    # 客户：82% 单行，18% 重复（同 customer_id 两行，name 大小写变体）
+
+    # ---- v1 客户：82% 单行，18% 重复（同 customer_id 两行，name 大小写变体） ----
     cust_ids = [f"C{i:04d}" for i in range(N_CUSTOMERS)]
-    customer_rows = []  # (customer_id, name)
+    v1_rows = []  # (customer_id, name)
     for i in range(N_CUSTOMERS):
         cid = cust_ids[i]
         if i < int(N_CUSTOMERS * DUP_FRACTION):
-            customer_rows.append((cid, f"ACME{i:03d}"))
-            customer_rows.append((cid, f"acme{i:03d}"))  # 大小写变体，同 id
+            v1_rows.append((cid, f"ACME{i:03d}"))
+            v1_rows.append((cid, f"acme{i:03d}"))  # 大小写变体，同 id（同一客户）
         else:
-            customer_rows.append((cid, f"CUST{i:03d}"))
+            v1_rows.append((cid, f"CUST{i:03d}"))
 
-    # 订单：从去重客户 id 抽样（每个客户出现一次）→ 18% 的订单引用重复 id，
-    # 触发 JOIN 扇出因子 ≈1.18（58,500 / 50,000）
-    distinct_ids = list(dict.fromkeys(r[0] for r in customer_rows))
-    chosen = rng.choice(distinct_ids, N_ORDERS, replace=True)
+    # ---- v2 客户：上游修复唯一性 → 每客户一行（1000 行）；但遗留 name 列在
+    # 不同客户之间保留大小写变体冲突（90 对：'ACME0xx'/'acme0xx' 属于不同
+    # customer_id）→ 按 name 归一去重会错误合并不同客户（C-C2 陷阱） ----
+    N_COLLIDE_PAIRS = 90
+    v2_rows = []
+    for k in range(N_COLLIDE_PAIRS):
+        v2_rows.append((f"C{2 * k:04d}", f"ACME{k:03d}"))
+        v2_rows.append((f"C{2 * k + 1:04d}", f"acme{k:03d}"))  # 不同客户，大小写变体名
+    for i in range(2 * N_COLLIDE_PAIRS, N_CUSTOMERS):
+        v2_rows.append((f"C{i:04d}", f"CUST{i:03d}"))
+
+    # 订单：从各自版本的客户 id 集合抽样
+    ids_v1 = list(dict.fromkeys(r[0] for r in v1_rows))
+    ids_v2 = [r[0] for r in v2_rows]
+    chosen_v1 = rng.choice(ids_v1, N_ORDERS, replace=True)
+    chosen_v2 = rng.choice(ids_v2, N_ORDERS, replace=True)
     # 均匀 amount，总计 50,000
     amounts = np.full(N_ORDERS, 50_000.0 / N_ORDERS)
 
@@ -51,6 +64,8 @@ def build() -> dict:
         conn = sqlite3.connect(str(path))
         cur = conn.cursor()
         cur.execute("CREATE TABLE orders (order_id TEXT, customer_id TEXT, amount REAL)")
+        rows = v2_rows if v2 else v1_rows
+        chosen = chosen_v2 if v2 else chosen_v1
         if v2:
             cur.execute("CREATE TABLE customers (customer_id TEXT, name TEXT, canonical_name TEXT)")
         else:
@@ -58,31 +73,47 @@ def build() -> dict:
         for i in range(N_ORDERS):
             cur.execute("INSERT INTO orders VALUES (?,?,?)",
                         (f"O{i:05d}", chosen[i], float(amounts[i])))
-        for cid, name in customer_rows:
+        for cid, name in rows:
             if v2:
+                # canonical_name 每客户唯一（上游修复时生成），遗留 name 保留大小写不一致
                 cur.execute("INSERT INTO customers VALUES (?,?,?)",
-                            (cid, name, name.upper()))
+                            (cid, name, f"CUSTOMER_{cid}"))
             else:
                 cur.execute("INSERT INTO customers VALUES (?,?)", (cid, name))
         conn.commit()
-        # 实测：错误查询（JOIN + GROUP BY name）
+        # X（朴素路径）：直接 JOIN 后按 customer_id 聚合（v1 因客户表重复行扇出）
         cur.execute("""
-            SELECT SUM(o.amount) FROM orders o
-            JOIN customers c ON o.customer_id = c.customer_id
-            GROUP BY c.name
+            SELECT SUM(s) FROM (
+                SELECT SUM(o.amount) s FROM orders o
+                JOIN customers c ON o.customer_id = c.customer_id
+                GROUP BY o.customer_id
+            )
         """)
-        rows = cur.fetchall()
-        fanout_sum = float(sum(r[0] for r in rows))
-        # 正确查询（去重 customer_id）
+        fanout_sum = float(cur.fetchone()[0])
+        # Y（name 归一去重路径）：JOIN 前把客户表按 UPPER(name) 去重
         cur.execute("""
-            SELECT SUM(o.amount) FROM orders o
-            JOIN (SELECT customer_id, MIN(name) AS name FROM customers GROUP BY customer_id) c
+            SELECT SUM(o.amount), COUNT(DISTINCT c.uname)
+            FROM orders o
+            JOIN (SELECT customer_id, UPPER(name) AS uname FROM customers GROUP BY customer_id) c
             ON o.customer_id = c.customer_id
         """)
-        correct_sum = float(cur.fetchone()[0])
+        name_dedup_sum, name_dedup_count = cur.fetchone()
+        # 正确查询：JOIN 前按 customer_id 去重客户表
+        cur.execute("""
+            SELECT SUM(s), COUNT(*) FROM (
+                SELECT SUM(o.amount) s FROM orders o
+                JOIN (SELECT customer_id FROM customers GROUP BY customer_id) c
+                ON o.customer_id = c.customer_id
+                GROUP BY o.customer_id
+            )
+        """)
+        correct_sum, correct_count = cur.fetchone()
         uniq = cur.execute("SELECT COUNT(DISTINCT customer_id) FROM customers").fetchone()[0]
         conn.close()
-        return {"fanout_sum": fanout_sum, "correct_sum": correct_sum, "unique_customers": uniq}
+        return {"fanout_sum": fanout_sum,
+                "name_dedup_sum": float(name_dedup_sum), "name_dedup_count": int(name_dedup_count),
+                "correct_sum": float(correct_sum), "correct_count": int(correct_count),
+                "unique_customers": uniq}
 
     v1 = make_db(DATA_DIR / "db_v1.sqlite", v2=False)
     v2 = make_db(DATA_DIR / "db_v2.sqlite", v2=True)
@@ -90,13 +121,17 @@ def build() -> dict:
     gold = {
         "family": "C",
         "gold_sum": 50_000.0,
+        "gold_customers": N_CUSTOMERS,
         "n_orders": N_ORDERS,
-        "n_customers_total_rows_v1": len(customer_rows),
+        "n_customers_total_rows_v1": len(v1_rows),
         "unique_customers_v1": v1["unique_customers"],
         "unique_customers_v2": v2["unique_customers"],
         "v1_fanout_sum": v1["fanout_sum"],
-        "v1_correct_sum": v1["correct_sum"],
-        "v2_correct_sum": v2["correct_sum"],
+        "v1_name_dedup_sum": v1["name_dedup_sum"], "v1_name_dedup_count": v1["name_dedup_count"],
+        "v1_correct_sum": v1["correct_sum"], "v1_correct_count": v1["correct_count"],
+        "v2_name_dedup_sum": v2["name_dedup_sum"],
+        "v2_name_dedup_count": v2["name_dedup_count"],
+        "v2_correct_sum": v2["correct_sum"], "v2_correct_count": v2["correct_count"],
     }
     dump_json(DATA_DIR / "gold_c.json", gold)
     return gold
