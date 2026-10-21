@@ -50,9 +50,17 @@ P-A1 预注册对比是 UNCOND vs NONE 的跨变体方向性差异；实测 UNCO
 | v3 稳定性复测 | qwen2.5:7b | 4 | 2（r1） | kwm_stab.log |
 | v3 单次承诺 | deepseek-v4.1-flash | 8（2×4 全矩阵） | 8 | kwm_cloud.log |
 
-**无法恢复 / 无法评分清单**（完整列举）：
+**唯一性审计（2026-10-21 深夜追加，第三轮评审行动 #1）**：
+`experiments/kwm_run_manifest.py` 机械生成 43 行唯一运行清单
+（`results/kwm_stage_a/run_manifest.json` + `run_manifest.md`，字段：run_id/模型/
+harness/变体×条件/证据源/L3 状态/分组），并机检三项条件：**(V-a)** 唯一 run_id
+数 = 43；**(V-b)** 10 个 JSON 证据运行与 33 个仅日志运行两池零重叠——
+`kwm_stab.log` 四次运行的归属显式记录（run 2/4 即存活 r1 JSON，仅计入 JSON 池；
+run 1/3 为被覆盖的 r0，仅计入 log-only 池）；**(V-c)** 全部分组数字
+（8+2 JSON；8 试点 + 3 v1 + 12 Gemma + 10 qwen 单次承诺 log-only）可由清单机械
+汇总复现。结论：无重复计数。
 
-1. **草稿 v0.2 §6.2 行 2**（"qwen 菜单+多次尝试 4/4 选 X"）：无对应保留日志。
+**无法恢复 / 无法评分清单**（完整列举）：1. **草稿 v0.2 §6.2 行 2**（"qwen 菜单+多次尝试 4/4 选 X"）：无对应保留日志。
    最接近的工件是确认性试点（kwm_pilot24.log），但其实测为 4/8 承诺 X——
    行 2 可能与试点 V-dead 半区混淆，**该行声明为不可验证**（v0.3 标注）。
 2. **草稿 v0.2 §6.2 行 5**（"记忆移至 user 消息首位，Gemma 无效"）：无保留日志，

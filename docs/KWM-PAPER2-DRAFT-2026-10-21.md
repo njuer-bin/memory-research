@@ -1,6 +1,6 @@
 # Diagnosing a Failed Confirmatory Pilot for Paired Validity Manipulations of Agent Failure Memory
 
-**Tech report draft v0.3 (2026-10-21; supersedes v0.2 after second external review)**
+**Tech report draft v0.4 (2026-10-21; supersedes v0.3 after third external review)**
 
 > **Status**: DRAFT — internal diagnostic record, not submission-ready.
 > **What this document is**: the record of a pre-registered confirmatory pilot that
@@ -23,6 +23,10 @@
 > evidence–claim reconciliation against the retained logs** (C1–C3 below; audit in
 > `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md`): the confirmatory pilot's behavior
 > description, the Gemma multi-attempt outcome, and the Gemma rule-variant outcome.
+> v0.4 (this version) adds a machine-generated **unique run manifest** (43 rows;
+> disjoint JSON/log-only evidence pools verified; Appendix A) and bounds every
+> inventory-wide claim to the 43 traceable runs; capability-tier labels are replaced
+> by model names; all claim strengths are aligned with n=1 evidence.
 
 ---
 
@@ -43,20 +47,23 @@ harness that makes method choice an explicit logged decision — and ran the
 pre-registered confirmatory pilot on the family with the cleanest statistical
 contrast.
 
-The pilot triggered its pre-registered behavioral stopping gate: the directional
-contrast the design hinges on (UNCOND vs. NONE, expected to reverse across validity
-variants) never appeared in any run. A subsequent adaptive diagnostic across harness
+The pilot triggered its pre-registered behavioral stopping gate: among the 43 traceable runs of the
+reconciled inventory, the directional contrast the design hinges on (UNCOND vs.
+NONE, expected to reverse across validity variants) was never observed — two early
+ladder variants without retained artifacts are excluded from this statement and
+marked unverifiable (§6.2). A subsequent adaptive diagnostic across harness
 variants and three model tiers (Qwen2.5-7B, Gemma3-12B, DeepSeek-V4.1-Flash) —
 reported here as *exploratory*, not confirmatory evidence — never produced that
-contrast either. Where method choice *did* move, it moved in places the design did
-not predict and cannot attribute to memory content: under multi-attempt budgets the
-COND and COND-MINUS cells moved *identically* (so the applicability content is ruled
-out as the cause), and in one Gemma configuration even the NONE cell adopted the
-robust tool. Under single-commitment budgets nobody switched in any condition.
-Retroactive scoring of every surviving run against the frozen outcome checkpoints
-shows the strongest model deterministically passes V-dead and fails V-revived
-(it commits its single attempt to a tool that crashes under revival), while the
-floor model's unreflective default is exactly correct under revival and biased under
+contrast either. Where method choice *did* move, the observed movement was
+identical between COND and COND-MINUS in the relevant cells; these single-run
+observations do not identify an effect attributable to applicability information —
+they neither establish such an effect nor rule one out. Under the
+single-commitment budget no run could, by construction, switch after a failed
+attempt; under multi-attempt budgets runs could and sometimes did. Retroactive
+scoring of all 43 runs against the frozen outcome checkpoints shows
+DeepSeek-V4.1-Flash deterministically passes V-dead and fails V-revived (it
+commits its single attempt to a tool that crashes under revival), while
+Qwen2.5-7B's unreflective default is exactly correct under revival and biased under
 V-dead. We additionally document a treatment confound: memory conditions received a
 memory-usage instruction that NONE did not, so all memory-vs-NONE comparisons
 contrast *memory + instruction* against *no memory*, not memory content alone
@@ -64,12 +71,13 @@ contrast *memory + instruction* against *no memory*, not memory content alone
 
 We contribute: (1) a reusable, gate-verified instrument for paired validity
 manipulations of failure memory (released with all traces); (2) a documented
-negative confirmatory pilot with a complete, fully reconciled diagnostic trail; and
+negative confirmatory pilot with a complete, reconciled diagnostic trail; and
 (3) a precisely stated hypothesis — the *memory-value window*: a memory can only add
 decision value when the agent neither already knows the lesson nor lacks the
-capability to act on it — together with a pre-registered, confound-free experiment
-design (task-private information, uniform base prompts, judge built in advance) that
-would test it. We explicitly do not claim the window is empty in general; we report
+capability to act on it — together with a proposed confirmatory protocol (draft,
+to be pre-registered before any run: task-private information, uniform base
+prompts, judge and scoring-field tests built in advance, and attempt budget as a
+pre-registered factor). We explicitly do not claim the window is empty in general; we report
 that no tested configuration occupied it, and that the present pilot cannot test
 whether any could.
 
@@ -122,15 +130,17 @@ in an instructive way, and this report is organized around that failure:
    method-menu harness turning method choice into an explicit behavioral metric; and
    gate checks V1–V6.
 2. **A documented negative confirmatory pilot with a reconciled evidence trail**:
-   the pre-registered directional contrast (UNCOND vs. NONE) was not observed in any
-   run; the full 43-run inventory is scored under frozen checkpoints or explicitly
+   the pre-registered directional contrast (UNCOND vs. NONE) was not observed in
+   any of the 43 traceable runs (uniqueness machine-verified; disjoint evidence
+   pools); the full inventory is scored under frozen checkpoints or explicitly
    marked unjudgeable; the gaps between earlier draft narratives and the primary
    artifacts are documented as corrections rather than silently patched.
 3. **A hypothesis with a test design**: the *memory-value window* — memory adds
    decision value only where (i) the lesson is absent from model weights and (ii) the
-   agent can act on the memory — plus a pre-registered, confound-free next experiment
-   (task-private information domains, uniform prompts) that would confirm or refute
-   it.
+   agent can act on the memory — plus a proposed confirmatory protocol (draft,
+   pending pre-registration) targeting task-private information domains with
+   uniform prompts and two dedicated validity checks, one for each conjunct of the
+   hypothesis.
 
 ---
 
@@ -246,7 +256,10 @@ Composite = 0.4·s1 + 0.2·s2 + 0.2·s3 + 0.2·s4; pass if ≥ 0.6. Because C-A3
 built (the stop-loss preceded it), we report the deterministic subtotal and the
 composite *bounds* [subtotal, subtotal + 0.2], with verdicts `pass_guaranteed`
 (lower bound ≥ 0.6), `fail_guaranteed` (upper bound < 0.6), and `unjudgeable`
-(otherwise — C-A3 is decisive). Families B/C checkpoints are analogously frozen
+(otherwise — C-A3 is decisive). **Terminology.** `pass_guaranteed` means
+*frozen-score pass* — the frozen weights and threshold guarantee a pass under the
+recorded deterministic components; it is **not** a claim of reliable task
+completion, and the two notions are kept apart throughout this report. Families B/C checkpoints are analogously frozen
 (B: total = 500,000 exact, month-row count exact; C: total = 50,000 exact, output
 customer count = *that variant's* frozen unique-customer gold — 991 in v1, 992 in
 v2 — so a per-variant-correct output is not a cross-variant mismatch).
@@ -254,11 +267,13 @@ v2 — so a per-variant-correct output is not a cross-variant mismatch).
 **Known metric-validity defect (recorded, not patched).** Under these frozen weights,
 C-A1 + C-A4 alone reach the 0.6 threshold: a run with a passing point estimate and
 ≤10 tool calls is `pass_guaranteed` even with no CI and no semantic check. This makes
-"task success" weaker than the reader's intuitive notion of a reliable result. Per
-our freeze discipline the rule is not edited post hoc; the next protocol replaces it
-with a *necessary-condition* design (point estimate within tolerance as a hard
-requirement; CI, semantic consistency, and cost as weighted additions) — see the
-protocol v2 document.
+"task success" weaker than the reader's intuitive notion of a reliable result. Per our freeze discipline the rule
+is not edited post hoc; the next protocol replaces it with a *necessary-condition*
+design (point estimate within tolerance as a hard requirement; CI, semantic
+consistency, and cost as weighted additions) and additionally requires automated
+scoring-field tests proving that every permitted method emits every field the
+scoring protocol consumes — or a pre-registered interpretation of absent fields —
+before any confirmatory run (see the protocol v2 document).
 
 ### 3.4 Primary endpoint vs. stopping gate (separation added in v0.3)
 
@@ -266,10 +281,12 @@ Two pre-registered quantities are often conflated; this report keeps them apart:
 
 - **Primary endpoint (H-A)**: task success rate under the frozen checkpoints —
   the quantity the hypotheses are about.
-- **G-core stopping gate**: a *behavioral viability* gate — if the behavioral layer
-  (method choice) shows no movement in the pre-registered contrast, extending the
-  pilot to more families/models cannot measure an outcome-layer memory effect, so
-  the pilot is stopped *by design*.
+- **G-core stopping gate**: a *behavioral viability* gate defined by the pilot's own
+  protocol — if the behavioral layer (method choice) shows no movement in the
+  pre-registered contrast, the pilot's continuation is not justified by its
+  pre-registered logic and it stops. This is a **stopping decision about this
+  pilot**, not a demonstration that other task families, models, or attempt budgets
+  could not measure an outcome-layer memory effect.
 
 The pilot was stopped by G-core. Consequently **H-A was not fully tested**: the
 outcome layer was scored where artifacts permit (Section 6.4), but the pilot's stop
@@ -288,8 +305,8 @@ All artifacts are frozen in the repository (paths in Appendix A).
 
 Three data-analysis families, each with a naive method X (the NONE-condition natural
 default), a memory-suggested alternative Y (a project trap tool whose frozen
-implementation is task-passing in V-dead and crashes in V-revived), and gold
-standards:
+implementation is task-passing in V-dead and *fails* in V-revived — by assertion
+crash in families A/B, by **silent data loss** in family C), and gold standards:
 
 | Family | Failure mode of X | X (naive) | Gold | X in V-dead | X in V-revived | Y (trap tool) in V-dead | Y in V-revived |
 |---|---|---|---|---|---|---|---|
@@ -309,8 +326,14 @@ checkpoint table freezes per-variant golds.
 
 Nine record templates (3 families × UNCOND/COND/COND-MINUS), fact-matched per family;
 COND-MINUS equalized in length with neutral archival filler. A five-part
-contamination check verifies: no gold *absolute* value in any template; COND-MINUS
-semantic distance from COND < 0.5 cosine (bge-m3, 1024-d; measured 0.487); length
+contamination check verifies: no gold *absolute* value in any template; COND-MINUS–
+COND embedding distance below a 0.5 threshold, computed as cosine *distance*
+(1 − cosine similarity) over bge-m3 (1024-d) embeddings; measured 0.487. This is a
+leakage *heuristic*: it shows the replacement filler is not a near-duplicate of the
+COND text, but an embedding distance alone cannot prove the absence of applicability
+information — it is therefore one signal alongside the template-consistency audit,
+and a blind human review of all nine templates is added as a protocol-v2
+requirement before any further run. The check also verifies: length
 parity within 10%; template consistency; no leak words in task descriptions.
 All checks green before any agent run.
 
@@ -353,7 +376,7 @@ the only difference — see the protocol v2 document.
 |---|---|---|
 | V1 data reproduction | simulators reproduce designed golds | pass |
 | V2 revival | deletion-based methods unbiased in V-revived | pass |
-| V3 trap tools | Y passes in V-dead, crashes in V-revived (A, B); C's Y-trap verified | pass |
+| V3 trap tools | Y passes in V-dead, fails in V-revived (A/B: assertion crash; C: silent customer loss) | pass |
 | V4 templates | contamination checks all green | pass |
 | V5 family-B exploration | v1/v2 asymmetries verified end-to-end | pass |
 | V6 natural default | NONE-condition agents first-choose X | pass (qwen2.5:7b, 2/2; Δ=8.105) |
@@ -414,8 +437,10 @@ V-revived: all four cells `pass_guaranteed` (0.8).
    the pilot stops. *The verdict stands; v0.2's stated reason ("the behavioral
    metric does not move") does not.*
 2. Movement *did* occur — in COND and COND-MINUS cells, **identically**. Because
-   COND-MINUS carries non-diagnostic content, the movement cannot be attributed to
-   the applicability information; and because each cell is n=1, the COND/COND-MINUS
+   COND-MINUS carries non-diagnostic content, the observed movement is identical
+   between the two conditions in the relevant cells; these single-run observations
+   do not identify an effect attributable to the applicability information — they
+   neither establish such an effect nor rule one out — and the COND/COND-MINUS
    vs. UNCOND difference is equally consistent with run-to-run stochasticity.
    No directional claim is made.
 3. The L3 layering in V-dead (memory-present cells 0.6 vs. NONE/UNCOND 0.4) is
@@ -441,15 +466,19 @@ artifacts are marked *unverifiable*** rather than asserted.
 | 3 | Menu + multi-attempt + memory-usage rule (`kwm_gem_rule.log`) | Gemma3-12B | **switches to mi_tool in V-dead cells** (NONE, UNCOND, COND; UNCOND/COND explicitly citing the memory) and adopts mi_tool/impute in V-revived cells — *including recovering to X after the mi_tool crash*; NONE/V-dead also adopts mi_tool, so switching is not memory-specific. (v0.2's "8/8 choose X" was wrong — corrected; that description matches row 4's harness) |
 | 4 | Decision-point binding (`kwm_bind.log`) | Gemma3-12b | 4/4 adopt X; V-revived finals *fabricate* applicability ("current data has similar missing pattern to train_v1.csv") to justify X |
 | 5 | Memory relocated to first user message — *no retained log* | Gemma3-12B | **unverifiable** (v0.2 claimed "no effect") |
-| 6 | v3 single commitment (budget=1) + cloud strong model (`kwm_cloud.log`) | DeepSeek-V4.1-Flash | all 8 cells commit to `mi_tool` — see §6.3; in V-revived this is *not* "choosing the optimal method" (v0.1's wording, corrected in v0.2) |
+| 6 | v3 single commitment (budget=1) + cloud model (`kwm_cloud.log`) | DeepSeek-V4.1-Flash | all 8 cells commit to `mi_tool` — see §6.3; in V-revived this is *not* "choosing the optimal method" (v0.1's wording, corrected in v0.2) |
 | — | v3 single commitment (`kwm_v3.log`, `kwm_stab.log`) | Qwen2.5-7B | 8/8 + 2 stability reruns all adopt X, citing budget; V-revived cells score 0.8 pass_guaranteed, V-dead cells 0.4 unjudgeable |
 
-Reading the ladder honestly: **no configuration produced the pre-registered
-contrast**; movement, where it occurred (rows 2′/3 vs. the pilot), was inconsistent
-across harness variants and never specific to conditional content (NONE cells move
-under row 3; COND-MINUS moves identically to COND in the pilot). The only factors
-that reliably changed behavior were **harness budget structure** (single commitment
-freezes everyone; multi-attempt permits switching) and **model identity**.
+Reading the ladder honestly: **no traceable configuration produced the
+pre-registered contrast**; movement, where it occurred (rows 2′/3 vs. the pilot),
+was inconsistent across harness variants and not specific to conditional content
+(NONE cells move under row 3; COND-MINUS moves identically to COND in the pilot).
+Two structural correspondences are observed, not causal findings: the
+single-commitment configuration *by design* permits no switch after a failed
+attempt, and that is exactly where switching is absent; multi-attempt
+configurations permit switching and recovery, and that is where they occur.
+Attempt budget is accordingly treated as a design factor the next protocol must
+pre-register and manipulate — not as an identified cause of model behavior.
 
 ### 6.3 The strong-model matrix (rebuilt from primary artifacts; unchanged from v0.2)
 
@@ -463,11 +492,11 @@ freezes everyone; multi-attempt permits switching) and **model identity**.
 
 Three observations, each verified against the JSONs: (i) the choice is *invariant
 across all four memory conditions* — including NONE (`memory_injected: False`) — so
-the strong model's behavior is a **mechanical preference for the robust tool**
+the model's behavior is a **mechanical preference for the robust tool**
 (strategy inertia / over-generalization), *not* condition adaptation and *not*
 demonstrably "prior knowledge covers the memory's value"; (ii) in V-revived the
 chosen tool is **not** the optimal method — the naive method would have passed the
-frozen checkpoints (dev −0.218 ≤ 0.3) — so the strongest model deterministically
+frozen checkpoints (dev −0.218 ≤ 0.3) — so DeepSeek-V4.1-Flash deterministically
 *fails* the entire V-revived column; (iii) its failure reports are honest (no
 fabricated numbers) but never use the COND applicability condition to *anticipate*
 that the feared path had become safe.
@@ -486,6 +515,16 @@ written): `experiments/kwm_score_logonly.py` → `l3_scoring_logonly.json`; ever
 entry carries its log file and run index. (c) C-A3 unjudgeable everywhere (judge
 never built); verdicts are interval-valued. Scoring convention: the adopted method's
 output is scored; exploration is L2-only.
+
+**Uniqueness audit (added in v0.4).** A machine-generated manifest
+(`experiments/kwm_run_manifest.py` → `results/kwm_stage_a/run_manifest.json`,
+43 rows) verifies the three conditions an evidence audit must satisfy: **(V-a)**
+exactly 43 unique run IDs; **(V-b)** the 10 JSON-evidenced and 33 log-only runs are
+disjoint — the four `kwm_stab.log` runs are split explicitly (runs 2/4 *are* the
+surviving r1 JSONs and are counted only in the JSON pool; runs 1/3 are the
+overwritten r0s, counted only as log-only); **(V-c)** every grouping number in
+Table 6.4b regenerates from the manifest alone. The earlier "8 + 2 stab" phrasing
+referred only to the two overwritten r0 stability runs; no run is double-counted.
 
 **Table 6.4a — surviving JSONs (unchanged from v0.2):**
 
@@ -515,26 +554,31 @@ prior reason sets s3.)
 | Confirmatory pilot (multi-attempt, qwen) | 8 | 6 (2 V-revived X-cells + 4 COND/COND-MINUS cells) | 0 | 2 (NONE, UNCOND × V-dead) |
 | v1 free-code (qwen, gemma) | 3 | 0 | 1 (NONE/V-dead, no CI) | 2 |
 | Gemma multi-attempt (menu / +rule / binding) | 12 | 10 | 0 | 2 |
-| v3 single commitment (qwen, 8 + 2 stab) | 10 | 4 (V-revived) | 0 | 6 (V-dead) |
+| v3 single commitment (qwen: 8 v3-validation + 2 overwritten r0 stability runs) | 10 | 4 (V-revived) | 0 | 6 (V-dead) |
 
 **What the reconciled matrix licenses.** Within the *v3 single-commitment*
 configuration (the only one with structured JSONs), success is determined by
 model × variant with zero variance from memory representation. Across the full
-43-run inventory that statement does *not* generalize: outcome patterns track
-harness budget structure and model identity, and the few places where memory
-conditions diverged (pilot COND/COND-MINUS vs. UNCOND; Gemma row 3) are
-n=1, unpredicted, and content-unattributable (COND-MINUS ≡ COND; NONE moves too).
-The robust, inventory-wide observations are: (1) the UNCOND-vs-NONE contrast never
-appeared anywhere; (2) prospective use of the applicability condition occurred in
-zero of 43 runs; (3) single-commitment budget suppresses all switching at every
-tier; (4) DeepSeek deterministically fails the revived column by committing to a
-crashing tool, while Gemma — under multi-attempt budget — recovers to X after the
-same crash.
+43-run manifest that statement does *not* generalize: outcome patterns *correspond
+with* harness budget structure and model identity — factors that were never crossed
+in a full factorial design, so the correspondence is not a causal attribution.
+The places where memory conditions diverged (pilot COND/COND-MINUS vs. UNCOND;
+Gemma row 3) are n=1, unpredicted, and do not identify a content effect
+(COND-MINUS ≡ COND; NONE moves too). Among the 43 traceable runs: (1) the
+UNCOND-vs-NONE contrast was never observed; (2) prospective use of the
+applicability condition occurred in zero of 43 runs; (3) switching is absent
+exactly where the single-commitment design forbids it and present where
+multi-attempt budgets allow it — a design-property correspondence, not a finding
+about model reasoning; (4) DeepSeek-V4.1-Flash deterministically fails the revived
+column by committing to a crashing tool, while Gemma3-12B — under a multi-attempt
+budget — recovers to X after the same crash.
 
 ### 6.5 Evidence strength
 
 - The confirmatory pilot is one family (A), one model, n=1 per cell. The diagnostics
   are exploratory, adaptive, and non-poolable.
+- Run uniqueness is machine-verified (manifest, §6.4): 43 unique runs, disjoint
+  JSON/log-only evidence pools, group totals regenerable from the manifest alone.
 - Model attribution relies on logs because the runner omitted the model field
   (defect recorded, Section 5); attribution is unambiguous for the surviving JSONs,
   but we mark it as reconstructed.
@@ -558,25 +602,33 @@ at the behavioral gate, so H-A remains untested at confirmatory strength (§3.4)
 
 **Does support (as observations, within scope)**:
 
-1. The pre-registered contrast (UNCOND vs. NONE) never appeared in any run across
-   all harness variants and model tiers. Whatever would mediate the designed
-   memory→behavior transfer, no tested configuration engaged it.
-2. Method-choice movement, where it occurred, was never attributable to memory
-   *content*: COND-MINUS behaved identically to COND wherever both moved, and NONE
-   cells moved under at least one configuration. The reliable behavioral levers in
-   this data are budget structure and model identity, not the memory manipulation.
-3. Prospective use of applicability conditions occurred in zero of 43 runs at any
-   tier: no run inferred from COND that the feared path had become safe before
-   choosing. The closest behaviors are post-hoc: DeepSeek's honest post-crash
-   report; Gemma's post-crash inference that "the missingness pattern changed"
-   (which it used to justify caution, not to conclude the path was safe).
-4. Under frozen checkpoints, the strongest model deterministically fails the
+1. The pre-registered contrast (UNCOND vs. NONE) was not observed in any of the 43
+   traceable runs across all harness variants and model tiers (two early variants
+   without retained artifacts are excluded from this statement and marked
+   unverifiable). Whatever would mediate the designed memory→behavior transfer, no
+   traceable configuration engaged it.
+2. In the retained exploratory runs there is insufficient evidence to attribute
+   any method-choice movement to memory *content*: COND-MINUS behaved identically
+   to COND wherever both moved, and NONE cells moved under at least one
+   configuration. Observed behavior *corresponds with* budget structure and model
+   identity — factors never crossed factorially, so this is a correspondence, not
+   a causal attribution.
+3. Prospective use of applicability conditions occurred in zero of the 43 traceable
+   runs at any tier: no run inferred from COND that the feared path had become safe
+   before choosing. The closest behaviors are post-hoc: DeepSeek-V4.1-Flash's honest
+   post-crash report; Gemma3-12B's post-crash inference that "the missingness
+   pattern changed" (which it used to justify caution, not to conclude the path was
+   safe).
+4. Under frozen checkpoints, DeepSeek-V4.1-Flash deterministically fails the
    *entire revived column* by committing its only attempt to a crashing tool — the
-   cell type that motivates conditional memory in the first place — while the floor
-   model's unreflective default is exactly correct under revival. Under
-   single-commitment budget, recovery from the crash is impossible for any
-   condition; under multi-attempt budget, Gemma recovers. Budget structure is
-   therefore itself an experimental variable future designs must pre-register.
+   cell type that motivates conditional memory in the first place — while
+   Qwen2.5-7B's unreflective default is exactly correct under revival (model names
+   are descriptive here; no independent capability testing establishes a strict
+   hierarchy on this task). Recovery from the crash is impossible *by design* under
+   the single-commitment budget and occurs under a multi-attempt budget
+   (Gemma3-12B); this pattern motivates pre-registering attempt budget as an
+   independent factor in future designs rather than explaining behavior by it post
+   hoc.
 
 ### 7.2 The memory-value window: a hypothesis, with a test
 
@@ -599,9 +651,29 @@ holding task structure, models, and harness fixed, with uniform base prompts acr
 conditions (§4.4 confound removed). Under that design, a NONE-condition agent cannot
 succeed by prior knowledge, so condition (i) holds by construction and the
 manipulation tests the memory's *incremental* value rather than re-testing textbook
-statistics. This is the recommended next experiment if this line continues; it
-reuses the released instrument except for the task families' information content
-and the prompt structure.
+statistics.
+
+Because neither conjunct of H-window is measured by the main manipulation alone,
+the proposed protocol (v2) adds two dedicated checks, one per conjunct:
+
+- **(a) Information-unobtainability check (conjunct i).** Every task instance's
+  project rules/parameters are randomly generated per instance, with the generation
+  seed, the prior environment, and the change record retained as artifacts; task
+  descriptions and tool interfaces are audited so the instance-level answer cannot
+  be leaked through the prompt or inferred from fixed tool names. This makes "the
+  memory carries instance-level information absent from the weights" verifiable
+  rather than assumed.
+- **(b) Positive control for memory-use ability (conjunct ii).** A separate
+  condition in which the memory is unambiguous, correct, and clearly applicable to
+  the current task. A model that cannot act on memory even under this condition
+  should not have the main experiment's null result interpreted as "the memory
+  lacks incremental value" — the failure would lie in memory use, not memory
+  content.
+
+Testing the two conjuncts separately has more explanatory power than comparing
+"weaker" and "stronger" models. The full design is the proposed confirmatory
+protocol (draft v2, pending pre-registration); it reuses the released instrument
+except for the task families' information content and the prompt structure.
 
 ### 7.3 Consilience with prior observations
 
@@ -639,7 +711,7 @@ these works measured wrong abandonment of revived paths.
 
 1. **Single task family in all agent runs** (A); B/C instruments verified but never
    exercised with agents. Family A's bias mechanism is the most textbook-adjacent of
-   the three; a less standard mechanism could change the strong model's NONE
+   the three; a less standard mechanism could change DeepSeek-V4.1-Flash's NONE
    behavior.
 2. **n=1 per cell; three models; one prompt family per harness variant.** All
    diagnostic claims are qualitative and direction-level.
@@ -660,7 +732,12 @@ these works measured wrong abandonment of revived paths.
    artifact.
 7. **Memories were injected verbatim** with dense-retrieval logging; no consolidation
    noise. Findings concern memory *use*, not *formation*.
-8. **No "first" claims**: the audit (Table 1) describes eight works read in full on
+8. **Neither conjunct of H-window is independently measured in this data**: "knowledge
+   absent from weights" is inferred indirectly (a NONE-condition failure can also
+   mean the model cannot execute the task or cannot use memories), and no positive
+   control for memory-use ability exists. The proposed protocol adds both checks
+   (Section 7.2).
+9. **No "first" claims**: the audit (Table 1) describes eight works read in full on
    2026-10-21 under a stated screening criterion (§2); a systematic pre-registration
    sweep (e.g., SciReg / OSF registries) has not been performed, so the seam
    statement is corpus-bounded.
@@ -671,24 +748,29 @@ these works measured wrong abandonment of revived paths.
 
 We built and released a gate-verified instrument for paired validity manipulation of
 agent failure memory and ran the pre-registered confirmatory pilot, which triggered
-its pre-registered behavioral stopping gate: the designed directional contrast never
-appeared in any run. A full evidence–claim reconciliation against retained artifacts
+its pre-registered behavioral stopping gate: among the 43 traceable runs of the
+reconciled inventory (uniqueness machine-verified; two early variants without
+retained artifacts excluded as unverifiable), the designed directional contrast
+never appeared. A full evidence–claim reconciliation against retained artifacts
 scored all 43 runs (or marked them unjudgeable/unverifiable) and corrected three
-residual narrative errors from earlier drafts; the surviving, inventory-wide
-observations are narrow — no UNCOND-vs-NONE contrast anywhere, zero prospective use
-of applicability conditions, behavioral levers being budget structure and model
-identity rather than memory content. We report the failure with its complete
-diagnostic trail, a disclosed treatment confound, and a precisely stated hypothesis —
-the memory-value window — together with a pre-registered, confound-free experiment
-that would test it. The instrument, the negative result, and the correction history
+residual narrative errors from earlier drafts; the surviving observations are
+narrow — no UNCOND-vs-NONE contrast among the traceable runs, zero prospective use
+of applicability conditions, and behavior that *corresponds with* budget structure
+and model identity (non-causally: the factors were never crossed) rather than
+evidence identifying memory-content effects. We report the failure with its
+complete diagnostic trail, a disclosed treatment confound, and a precisely stated
+hypothesis — the memory-value window — together with a proposed confirmatory
+protocol (draft, pending pre-registration) with per-conjunct validity checks that
+would test it. The instrument, the negative result, and the correction history
 (v0.1's strong-model mischaracterization; v0.3's three log-based corrections) are
 released in full.
 
 **Artifacts**: simulators and gold standards (3 families), nine frozen record
 templates + contamination checker, trap tools, method-menu agent + runner,
-retroactive scorers (JSON + log-only), all run JSONs, retained execution logs, the
-evidence audit, the protocol v2 draft, and the decision record (master design doc
-v2.4, task-set v1, harness change log, stage-A closure report + errata).
+retroactive scorers (JSON + log-only), the unique run manifest, all run JSONs,
+retained execution logs, the evidence audit, the protocol v2 draft, and the
+decision record (master design doc v2.4, task-set v1, harness change log, stage-A
+closure report + errata).
 
 ---
 
@@ -729,6 +811,7 @@ v2.4, task-set v1, harness change log, stage-A closure report + errata).
 | Rows 2 and 5 unverifiable | absence of retained artifacts; noted in harness-change record |
 | Retroactive L3 scores — JSONs | `experiments/kwm_score_retro.py`; `results/kwm_stage_a/l3_scoring_retroactive.json` |
 | Retroactive L3 scores — log-only (33 runs, per-run log citation) | `experiments/kwm_score_logonly.py`; `results/kwm_stage_a/l3_scoring_logonly.json`; `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md` |
+| Run uniqueness (43 unique; disjoint JSON/log pools; regenerable group totals) | `experiments/kwm_run_manifest.py`; `results/kwm_stage_a/run_manifest.json` + `run_manifest.md` |
 | Frozen checkpoints & tolerances (C-A1 ±0.3; C-A2 [0.9,3.5]; weights 0.4/0.2/0.2/0.2; pass ≥0.6; C per-variant golds 991/992) | `docs/KWM-TASKSET-V1-2026-10-21.md` §3.6/§4.4/§5.4/§7 |
 | Family golds & frozen-implementation outputs | `data/kwm_stage_a/gold_{a,b,c}.json`; `docs/KWM-HARNESS-CHANGE-2026-10-21.md` |
 | Contamination check values (0.487; all green) | `experiments/kwm_contamination_check.py` output |
@@ -757,3 +840,12 @@ v2.4, task-set v1, harness change log, stage-A closure report + errata).
    `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md`.
 5. Primary endpoint and stopping gate are now formally separated (§3.4); per review
    #2, the report no longer states that H-A was tested to a negative conclusion.
+6. v0.4 (third review): a unique run manifest was added and machine-verified —
+   43 unique runs, disjoint JSON/log-only pools (the `kwm_stab.log` runs 2/4 are the
+   surviving r1 JSONs; no double counting); all inventory-wide claims are bounded to
+   the 43 traceable runs; capability-tier labels ("strongest/floor model") are
+   replaced by model names; "ruled out" is replaced by "does not identify an effect"
+   per n=1 evidence; the single-commitment switching absence is framed as a design
+   property; G-core is framed strictly as a pilot-stopping decision; the next-round
+   design is relabeled "proposed confirmatory protocol (draft, pending
+   pre-registration)" and gains per-conjunct H-window validity checks (§7.2).
