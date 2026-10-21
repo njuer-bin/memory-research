@@ -115,6 +115,79 @@ def paired_bootstrap_diff(
     return point, lo, hi
 
 
+def build_conversation_map(dataset: str) -> dict[str, str]:
+    """Map question_id -> conversation_id for a normalized study dataset.
+
+    Used for cluster-robust bootstrap resampling (reviewer P4): questions
+    inside one conversation are correlated, so the resampling unit must be
+    the conversation, not the question.
+    """
+    from datasets.loader import iter_normalized
+
+    mapping: dict[str, str] = {}
+    for r in iter_normalized(dataset):
+        q = r.get("question_id")
+        c = (
+            r.get("conversation_id")
+            or r.get("sample_id")
+            or r.get("cid")
+            or r.get("conversation")
+        )
+        if q is not None:
+            mapping[str(q)] = str(c) if c is not None else "NA"
+    return mapping
+
+
+def paired_bootstrap_diff_clustered(
+    a: list[bool | None],
+    b: list[bool | None],
+    qids: list[str],
+    cid_of: dict[str, str],
+    repeats: int = 10000,
+    seed: int = 42,
+) -> tuple[float | None, float | None, float | None]:
+    """Cluster-robust percentile CI for acc(b) - acc(a).
+
+    Resamples whole conversations (clusters) with replacement; all
+    within-cluster question pairs are carried together, so intra-conversation
+    correlation is respected (unlike paired_bootstrap_diff, which resamples
+    questions independently).
+    """
+    triples = [
+        (x, y, cid_of.get(q))
+        for x, y, q in zip(a, b, qids)
+        if x is not None and y is not None
+    ]
+    clusters: dict[str, list[tuple[bool, bool]]] = {}
+    for x, y, c in triples:
+        clusters.setdefault(c, []).append((x, y))
+    cluster_ids = list(clusters.keys())
+    n_clusters = len(cluster_ids)
+    if n_clusters == 0:
+        return None, None, None
+    rng = random.Random(seed)
+    diffs = []
+    for _ in range(repeats):
+        chosen = [rng.choice(cluster_ids) for _ in range(n_clusters)]
+        xs, ys = [], []
+        for cid in chosen:
+            for x, y in clusters[cid]:
+                xs.append(x)
+                ys.append(y)
+        if not xs:
+            continue
+        diffs.append(sum(ys) / len(ys) - sum(xs) / len(xs))
+    if not diffs:
+        return None, None, None
+    diffs.sort()
+    lo = diffs[max(0, int(0.025 * repeats))]
+    hi = diffs[min(repeats - 1, int(0.975 * repeats))]
+    point = sum(y for _, y, _ in triples) / len(triples) - sum(
+        x for x, _, _ in triples
+    ) / len(triples)
+    return point, lo, hi
+
+
 def failure_distribution(rows: list[dict[str, Any]], mode: str) -> dict[str, int]:
     dist = {label: 0 for label in FAILURE_LABELS}
     for row in rows:
@@ -226,6 +299,12 @@ def main() -> None:
         "breakdown (e.g. longmemeval_oracle_n50, locomo_n50)",
     )
     parser.add_argument("--bootstrap-repeats", type=int, default=10000)
+    parser.add_argument(
+        "--cluster-by-conversation",
+        action="store_true",
+        help="resample whole conversations (clusters) instead of questions for "
+        "the paired bootstrap CI; requires --dataset to map question_id->conversation",
+    )
     args = parser.parse_args()
 
     rows = load_rows(Path(args.input))
@@ -268,6 +347,19 @@ def main() -> None:
                 f"  delta_acc = {point:+.3f}, "
                 f"paired bootstrap 95% CI = [{lo:+.3f}, {hi:+.3f}]"
             )
+        if args.cluster_by_conversation and args.dataset:
+            qids = [r["question_id"] for r in rows]
+            cid_of = build_conversation_map(args.dataset)
+            n_conv = len({cid_of.get(q) for q in qids})
+            print(f"  conversations (clusters) = {n_conv} over {len(qids)} questions")
+            cpoint, clo, chi = paired_bootstrap_diff_clustered(
+                control, treated, qids, cid_of, repeats=args.bootstrap_repeats
+            )
+            if cpoint is not None:
+                print(
+                    f"  cluster-robust 95% CI (by conversation) = "
+                    f"[{clo:+.3f}, {chi:+.3f}]"
+                )
 
     print("\n=== FAILURE DISTRIBUTION (real_memory) ===")
     dist = failure_distribution(rows, "real_memory")
