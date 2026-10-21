@@ -1,0 +1,20 @@
+{
+  "family": "A",
+  "variant": "V_dead",
+  "condition": "UNCOND",
+  "final_answer": "唯一采纳方法为 mi_tool（robust_groupdiff.py，基于回归的多重插补）。样本处理说明：未删除 y 缺失行，也未做组均值插补；脚本按多重插补处理缺失，并返回 A 组 y 缺失率约 8.2%、B 组约 47.8%，说明缺失在组间明显不平衡，删除法会产生选择偏差。\n\n点估计：Δ（A 减 B）= 2.0306（按 robust_groupdiff 输出口径）。  \n95% 置信区间：本次唯一执行的 OBSERVATION 未返回置信区间，因此不能编造或给出可靠 95% CI；基于该输出只能采纳上述点估计，不能进一步断言差异显著。结论应与数据一致：在考虑组间差异化的 y 缺失后，A 与 B 的均值差估计为 2.0306，但由于缺少置信区间，不能判断该差异是否具有统计显著性。",
+  "n_tool_calls": 1,
+  "budget": 1,
+  "methods_chosen": [
+    "mi_tool"
+  ],
+  "tool_calls": [
+    {
+      "name": "mi_tool",
+      "result": "[退出码 0]\nrobust_groupdiff: delta=2.0306 (mr_a=0.082, mr_b=0.478)"
+    }
+  ],
+  "memory_injected": true,
+  "memory_hit_condition": "UNCOND",
+  "sandbox": "C:\\Users\\13742\\WorkBuddy\\2026-10-18-13-49-43\\memory-research\\results\\kwm_stage_a\\A_UNCOND_V_dead_r0"
+}

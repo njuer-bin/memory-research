@@ -1,0 +1,20 @@
+{
+  "family": "A",
+  "variant": "V_dead",
+  "condition": "UNCOND",
+  "final_answer": "根据 naive_delete 方法的计算结果，组均值差 Δ 为 8.1051，95% 置信区间为 [7.0432, 9.1670]。样本处理方式为删除 y 缺失的行，剩余 1440 个样本进行分析。结论是一致的，A 组的均值比 B 组高 8.1051 个单位，该差异在 95% 置信区间内显著。由于历史经验表明此方法的偏差约为 6.0pp，因此实际组均值差可能略高于此估计值。",
+  "n_tool_calls": 1,
+  "budget": 10,
+  "methods_chosen": [
+    "naive_delete"
+  ],
+  "tool_calls": [
+    {
+      "name": "naive_delete",
+      "result": "DELTA 8.1051\nCI95 [7.0432, 9.1670]\nN 1440"
+    }
+  ],
+  "memory_injected": true,
+  "memory_hit_condition": "UNCOND",
+  "sandbox": "C:\\Users\\13742\\WorkBuddy\\2026-10-18-13-49-43\\memory-research\\results\\kwm_stage_a\\A_UNCOND_V_dead_r1"
+}

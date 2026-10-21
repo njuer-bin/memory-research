@@ -92,3 +92,13 @@ COND 的适用条件判别（V_revived 中推出"X 安全"）在三层模型中�
   过度泛化），V_dead 通过、V_revived 确定性失败**；"先验知识覆盖"解读撤回。
 - runner 缺陷记录：run JSON 未写 model 字段；变体间复用同名 tag 造成覆盖。
   已入库 results/kwm_stage_a/logs/ 保全日志；整改项记入论文二草稿 §7.4(4)。
+
+## 勘误 2（2026-10-21 深夜，第二轮外部评审驱动的全量证据对账）
+
+- 本文档附录"三层诊断结果"表中 mid 行（gemma3:12b "同上 + 反向解读记忆/
+  捏造适用性"）**与保留日志矛盾**：`kwm_gem_rule.log` 实测 Gemma 在多次尝试
+  预算下 V-dead 格引用记忆切换 mi_tool、V-revived 崩溃后回退 X；"捏造适用性"
+  来自 kwm_bind.log（决策点绑定）。mid 与 floor 行为并非相同；稳定的区别杠杆
+  是**预算结构**（单次承诺冻结全部切换）与模型身份，不是记忆内容。
+- 阶段 A 全量对账见 `docs/KWM-EVIDENCE-AUDIT-2026-10-21.md`；论文二草稿
+  v0.3（KWM-PAPER2-DRAFT-2026-10-21.md）已按对账结果重建 §6.1/§6.2。

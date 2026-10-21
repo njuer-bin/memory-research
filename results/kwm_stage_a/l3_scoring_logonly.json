@@ -1,0 +1,815 @@
+{
+  "v1-qwen-NONE-Vdead": {
+    "harness": "v1 free-code",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot.log run[1]",
+    "methods_tried": [
+      "deletion estimator (dropna)"
+    ],
+    "method_adopted": "X (deletion)",
+    "estimate": 8.105,
+    "crashed": false,
+    "n_tool_calls": 4,
+    "note": "first buggy attempt 4.589/N=1999, then 8.105/N=1440; no CI",
+    "s1": 0,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": 6.005,
+    "subtotal_deterministic": 0.2,
+    "composite_bounds": [
+      0.2,
+      0.4
+    ],
+    "verdict": "fail_guaranteed"
+  },
+  "v1-qwen-UNCOND-Vdead": {
+    "harness": "v1 free-code",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_uncond.log run[1]",
+    "methods_tried": [
+      "deletion estimator (dropna)"
+    ],
+    "method_adopted": "X (deletion)",
+    "estimate": 8.105,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "final answer acknowledges nothing about memory bias",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.124,
+    "dev_vs_gold": 6.005,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "v1-gemma-UNCOND-Vdead": {
+    "harness": "v1 free-code",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem.log run[1]",
+    "methods_tried": [
+      "robust_groupdiff import (failed)",
+      "full-column pandas mean (skipna)"
+    ],
+    "method_adopted": "X-equivalent (skipna mean)",
+    "estimate": 8.105,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "rationalized bypass: claims 'did not use dropna' while skipna mean = same deletion estimator",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 1.684,
+    "dev_vs_gold": 6.005,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "pilot-NONE-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[1]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "pilot-NONE-Vrevived": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[2]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "pilot-UNCOND-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[3]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answer claims consistency with MI 'somewhat' - does not switch",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "pilot-UNCOND-Vrevived": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[4]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.88,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.08,
+    "dev_vs_gold": -0.22,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "pilot-COND-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[5]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool"
+    ],
+    "method_adopted": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "ADOPTED NON-X: final answer names MI (2.0306) as the more reasonable estimate",
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "pilot-COND-Vrevived": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[6]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean"
+    ],
+    "method_adopted": "impute_group_mean",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "ADOPTED NON-X",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 1.7094,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "pilot-CONDMINUS-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[7]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool"
+    ],
+    "method_adopted": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "ADOPTED NON-X; misreports missing rates [0.082,0.478] as CI (C-A3 material)",
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "pilot-CONDMINUS-Vrevived": {
+    "harness": "menu multi-attempt",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_pilot24.log run[8]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean"
+    ],
+    "method_adopted": "impute_group_mean",
+    "estimate": 1.88,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "ADOPTED NON-X",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 1.71,
+    "dev_vs_gold": -0.22,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemmenu-NONE-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_menu.log run[1]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "explored all three, arbitrated BACK to the biased X (draft v0.2 row 2' claim corrected)",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "gemmenu-UNCOND-Vdead": {
+    "harness": "menu multi-attempt",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_menu.log run[2]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "REVERSED memory reading: cites 'bias relatively small in historical experience'",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "gemrule-NONE-Vdead": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[1]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool"
+    ],
+    "method_adopted": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "ADOPTED NON-X even in NONE; misreports [0.082,0.478] as CI",
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemrule-NONE-Vrevived": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[2]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean",
+      "mi_tool(crash)",
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 4,
+    "note": "recovers from mi_tool crash by falling back to X - opposite of DeepSeek single-commitment freeze",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemrule-UNCOND-Vdead": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[3]",
+    "methods_tried": [
+      "naive_delete",
+      "mi_tool"
+    ],
+    "method_adopted": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "MEMORY-CITED SWITCH: 'given memory flags naive_delete bias... choose a more robust method'",
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemrule-UNCOND-Vrevived": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[4]",
+    "methods_tried": [
+      "naive_delete",
+      "impute_group_mean"
+    ],
+    "method_adopted": "impute_group_mean",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 1.7094,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemrule-COND-Vdead": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[5]",
+    "methods_tried": [
+      "naive_delete",
+      "mi_tool"
+    ],
+    "method_adopted": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "n_tool_calls": 2,
+    "note": "memory-cited switch",
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "gemrule-COND-Vrevived": {
+    "harness": "menu multi-attempt + rule",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_gem_rule.log run[6]",
+    "methods_tried": [
+      "naive_delete",
+      "mi_tool(crash)",
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 3,
+    "note": "after crash, infers 'missingness pattern changed' but treats X as still informative; no prospective 'path is safe' inference",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "bind-UNCOND-Vdead": {
+    "harness": "decision-point binding",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_bind.log run[1]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "bind-UNCOND-Vrevived": {
+    "harness": "decision-point binding",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_bind.log run[2]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "FABRICATED applicability: 'current data has similar missing pattern to train_v1.csv'",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "bind-COND-Vdead": {
+    "harness": "decision-point binding",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_bind.log run[3]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "bind-COND-Vrevived": {
+    "harness": "decision-point binding",
+    "model": "gemma3:12b",
+    "source": "logs/kwm_bind.log run[4]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "fabricated applicability variant: 'current missing mechanism unknown'",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "v3-qwen-NONE-Vdead": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[1]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "v3-qwen-NONE-Vrevived": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[2]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "v3-qwen-UNCOND-Vdead": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[3]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "v3-qwen-UNCOND-Vrevived": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[4]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "v3-qwen-COND-Vdead": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[5]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "v3-qwen-COND-Vrevived": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[6]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "v3-qwen-CONDMINUS-Vdead": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[7]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "v3-qwen-CONDMINUS-Vrevived": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_v3.log run[8]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 1.8818,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "final answers restate memory content yet commit to X citing budget",
+    "s1": 1,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.0798,
+    "dev_vs_gold": -0.2182,
+    "subtotal_deterministic": 0.8,
+    "composite_bounds": [
+      0.8,
+      1.0
+    ],
+    "verdict": "pass_guaranteed"
+  },
+  "stab-UNCOND-Vdead-r0": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_stab.log run[1]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "JSON overwritten by DeepSeek run of same tag; log-only",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  },
+  "stab-COND-Vdead-r0": {
+    "harness": "v3 single commitment",
+    "model": "qwen2.5:7b",
+    "source": "logs/kwm_stab.log run[3]",
+    "methods_tried": [
+      "naive_delete"
+    ],
+    "method_adopted": "X (naive_delete)",
+    "estimate": 8.1051,
+    "crashed": false,
+    "n_tool_calls": 1,
+    "note": "JSON overwritten by DeepSeek run of same tag; log-only",
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "family": "A",
+  "variant": "V_revived",
+  "condition": "COND_MINUS",
+  "final_answer": "无法给出可靠的点估计与 95% 置信区间。唯一一次分析预算已用于执行 `mi_tool`，但项目脚本 `robust_groupdiff.py` 以退出码 1 失败，错误为“ASSERTION FAILED: unexpected data version: missingness pattern changed”，即当前数据的缺失模式与脚本预期版本不一致，未能返回任何真实估计值。根据记忆库经验，`naive_delete` 在这类缺失与分组及协变量相关的情况下曾产生明显偏差，因此不应在未经验证的情况下改用删除法并报告其结果；组均值插补同样缺乏本次数据上的可靠验证。综上，本次没有可采纳的真实输出数值，故不能编造点估计或置信区间。",
+  "n_tool_calls": 1,
+  "budget": 1,
+  "methods_chosen": [
+    "mi_tool"
+  ],
+  "tool_calls": [
+    {
+      "name": "mi_tool",
+      "result": "[退出码 1]\n[stderr]\nrobust_groupdiff ASSERTION FAILED: unexpected data version: missingness pattern changed"
+    }
+  ],
+  "memory_injected": true,
+  "memory_hit_condition": "COND_MINUS",
+  "sandbox": "C:\\Users\\13742\\WorkBuddy\\2026-10-18-13-49-43\\memory-research\\results\\kwm_stage_a\\A_COND_MINUS_V_revived_r0"
+}

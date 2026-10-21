@@ -1,0 +1,20 @@
+{
+  "family": "A",
+  "variant": "V_dead",
+  "condition": "COND",
+  "final_answer": "唯一采纳方法为 mi_tool（基于回归的多重插补）。在该方法输出中，A 组减 B 组的均值差点估计为 Δ = 2.0306（按 y 的原始单位），A 组缺失率约 8.2%，B 组缺失率约 47.8%。由于本次 OBSERVATION 未返回 95% 置信区间，无法在不编造数值的前提下给出可靠区间；因此不能据此对统计显著性作进一步结论。结论：应采用多重插补结果作为主估计，A 组均值高于 B 组约 2.03 个单位；删除法不适用于本数据，因为缺失率在两组间差异明显。",
+  "n_tool_calls": 1,
+  "budget": 1,
+  "methods_chosen": [
+    "mi_tool"
+  ],
+  "tool_calls": [
+    {
+      "name": "mi_tool",
+      "result": "[退出码 0]\nrobust_groupdiff: delta=2.0306 (mr_a=0.082, mr_b=0.478)"
+    }
+  ],
+  "memory_injected": true,
+  "memory_hit_condition": "COND",
+  "sandbox": "C:\\Users\\13742\\WorkBuddy\\2026-10-18-13-49-43\\memory-research\\results\\kwm_stage_a\\A_COND_V_dead_r0"
+}

@@ -1,0 +1,192 @@
+{
+  "A_COND_MINUS_V_dead_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_COND_MINUS_V_revived_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": null,
+    "crashed": true,
+    "ci_width": null,
+    "dev_vs_gold": null,
+    "s1": 0,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.2,
+    "composite_bounds": [
+      0.2,
+      0.4
+    ],
+    "verdict": "fail_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_COND_V_dead_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_COND_V_dead_r1": {
+    "model_attribution": "qwen2.5:7b",
+    "methods_chosen": "naive_delete",
+    "estimate": 8.1051,
+    "crashed": false,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)",
+    "n_tool_calls": 1
+  },
+  "A_COND_V_revived_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": null,
+    "crashed": true,
+    "ci_width": null,
+    "dev_vs_gold": null,
+    "s1": 0,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.2,
+    "composite_bounds": [
+      0.2,
+      0.4
+    ],
+    "verdict": "fail_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_NONE_V_dead_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_NONE_V_revived_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": null,
+    "crashed": true,
+    "ci_width": null,
+    "dev_vs_gold": null,
+    "s1": 0,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.2,
+    "composite_bounds": [
+      0.2,
+      0.4
+    ],
+    "verdict": "fail_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_UNCOND_V_dead_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": 2.0306,
+    "crashed": false,
+    "ci_width": null,
+    "dev_vs_gold": -0.0694,
+    "s1": 1,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.6,
+    "composite_bounds": [
+      0.6,
+      0.8
+    ],
+    "verdict": "pass_guaranteed",
+    "n_tool_calls": 1
+  },
+  "A_UNCOND_V_dead_r1": {
+    "model_attribution": "qwen2.5:7b",
+    "methods_chosen": "naive_delete",
+    "estimate": 8.1051,
+    "crashed": false,
+    "ci_width": 2.1238,
+    "dev_vs_gold": 6.0051,
+    "s1": 0,
+    "s2": 1,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.4,
+    "composite_bounds": [
+      0.4,
+      0.6
+    ],
+    "verdict": "unjudgeable(C-A3 decisive)",
+    "n_tool_calls": 1
+  },
+  "A_UNCOND_V_revived_r0": {
+    "model_attribution": "deepseek-v4.1f",
+    "methods_chosen": "mi_tool",
+    "estimate": null,
+    "crashed": true,
+    "ci_width": null,
+    "dev_vs_gold": null,
+    "s1": 0,
+    "s2": 0,
+    "s4": 1,
+    "s3": "UNJUDGEABLE(judge not built)",
+    "subtotal_deterministic": 0.2,
+    "composite_bounds": [
+      0.2,
+      0.4
+    ],
+    "verdict": "fail_guaranteed",
+    "n_tool_calls": 1
+  }
+}

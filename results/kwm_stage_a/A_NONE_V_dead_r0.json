@@ -1,0 +1,20 @@
+{
+  "family": "A",
+  "variant": "V_dead",
+  "condition": "NONE",
+  "final_answer": "本次唯一采纳的方法为 `mi_tool`（基于回归的多重插补估计）。在该方法输出中，组均值差 Δ（A 减 B）的点估计为 **2.0306**；A、B 两组的缺失率分别为 **8.2%** 和 **47.8%**，缺失值通过多重插补框架处理，而非删除或用组均值直接填补。\n\n关于 95% 置信区间：本次方法输出仅包含点估计 `delta=2.0306` 及缺失率 `mr_a=0.082, mr_b=0.478`，未返回标准误或置信区间，因此不能在不编造数值的前提下给出可靠 95% CI。基于现有真实结果，只能结论为：在多重插补模型下，A 组均值较 B 组高约 **2.0306**；但由于 95% CI 未获得，尚不能据此判断该差异是否具有统计显著性。",
+  "n_tool_calls": 1,
+  "budget": 1,
+  "methods_chosen": [
+    "mi_tool"
+  ],
+  "tool_calls": [
+    {
+      "name": "mi_tool",
+      "result": "[退出码 0]\nrobust_groupdiff: delta=2.0306 (mr_a=0.082, mr_b=0.478)"
+    }
+  ],
+  "memory_injected": false,
+  "memory_hit_condition": null,
+  "sandbox": "C:\\Users\\13742\\WorkBuddy\\2026-10-18-13-49-43\\memory-research\\results\\kwm_stage_a\\A_NONE_V_dead_r0"
+}
