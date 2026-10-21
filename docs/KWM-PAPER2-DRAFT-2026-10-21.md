@@ -1,6 +1,6 @@
 # Diagnosing a Failed Confirmatory Pilot for Paired Validity Manipulations of Agent Failure Memory
 
-**Tech report draft v0.5 (2026-10-21; supersedes v0.4 after fourth external review)**
+**Tech report draft v0.5 (2026-10-21; supersedes v0.4 after fourth external review; amended + frozen 2026-10-21 — no further revisions planned; see correction log for the fifth-review theory-strength amendment)**
 
 > **Status**: DRAFT — internal diagnostic record, not submission-ready.
 > **What this document is**: the record of a pre-registered confirmatory pilot that
@@ -33,6 +33,14 @@
 > mechanism-laden phrasing ("strategy inertia") with behavioral-invariance wording,
 > and fixes inventory-wide counts as **execution traces** rather than a sample size
 > (§6.5).
+> v0.5 amendment (fifth external review, 2026-10-21; this is the document's *final*
+> content change before freeze): the MUW 2×2 is downgraded from a necessary-condition
+> theory to a **candidate window for the information channel only** — known-lesson
+> memories can still add value through orthogonal channels (provenance, confidence
+> calibration, explicit evidence, temporal validity, retrieval grounding, reduced
+> uncertainty, decision-time salience), so Novel(M)=0 does not force ΔU=0 (§7.2).
+> Paper-conversion items (abstract compression, related-work regrouping) are parked
+> in Appendix C and intentionally not applied here.
 
 ---
 
@@ -78,9 +86,12 @@ contrast *memory + instruction* against *no memory*, not memory content alone
 We contribute: (1) a reusable, gate-verified instrument for paired validity
 manipulations of failure memory (released with all traces); (2) a documented
 negative confirmatory pilot with a complete, reconciled diagnostic trail; and
-(3) a precisely stated hypothesis — the *memory utility window*: a memory can only add
-decision value when the agent neither already knows the lesson nor lacks the
-capability to act on it — together with a proposed confirmatory protocol (draft,
+(3) a precisely stated hypothesis — the *memory utility window*: via the
+*information* channel, a memory can only add decision value when the agent neither
+already knows the lesson nor lacks the
+capability to act on it (a *candidate* window; known-lesson memories may still add
+value through orthogonal channels such as provenance, confidence calibration, or
+temporal validity — §7.2) — together with a proposed confirmatory protocol (draft,
 to be pre-registered before any run: task-private information, uniform base
 prompts, judge and scoring-field tests built in advance, and attempt budget as a
 pre-registered factor). We explicitly do not claim the window is empty in general; we report
@@ -141,9 +152,11 @@ in an instructive way, and this report is organized around that failure:
    pools); the full inventory is scored under frozen checkpoints or explicitly
    marked unjudgeable; the gaps between earlier draft narratives and the primary
    artifacts are documented as corrections rather than silently patched.
-3. **A hypothesis with a test design**: the *memory utility window* — memory adds
-   decision value only where (i) the lesson is absent from model weights and (ii) the
-   agent can act on the memory — plus a proposed confirmatory protocol (draft,
+3. **A hypothesis with a test design**: the *memory utility window* — via the
+   information channel, memory adds decision value only where (i) the lesson is
+   absent from model weights and (ii) the agent can act on the memory (a *candidate*
+   gating claim, not a complete theory of memory utility — §7.2) — plus a proposed
+   confirmatory protocol (draft,
    pending pre-registration) targeting task-private information domains with
    uniform prompts and two dedicated validity checks, one for each conjunct of the
    hypothesis.
@@ -647,21 +660,34 @@ The observations motivate a precisely stated hypothesis. Failure memory is one
 instance of *negative/corrective memory*; the hypothesis is stated for retrieved
 memory in general, with failure memory as the experimental scenario.
 
-> **Memory Utility Window (MUW; previously H-window)**. For a retrieved memory *M*
-> and agent *A* on task distribution *T*, define the utility gain
-> ΔU(M) = U(A | M) − U(A | ∅). A memory can add decision value (ΔU > 0) only where
+> **Memory Utility Window (MUW; previously H-window) — a *candidate* window, not a
+> complete theory**. For a retrieved memory *M* and agent *A* on task distribution
+> *T*, define the utility gain ΔU(M) = U(A | M) − U(A | ∅). We hypothesize that a
+> memory can add decision value (ΔU > 0) via the *information* channel only where
 > two latent properties jointly hold:
 > - **Novel(M)** — the memory's lesson is *not* already encoded in the agent's
->   weights (otherwise the memory is redundant);
+>   weights (w.r.t. the information channel, the memory is redundant otherwise);
 > - **Actionable(M)** — the agent can act on memory instructions (otherwise the
 >   memory is inert).
 >
 > |  | Actionable | Not actionable |
 > |---|---|---|
 > | **Novel** | *utility window* (ΔU > 0 possible) | inert |
-> | **Known** | redundant | inert |
+> | **Known** | redundant (for the information channel) | inert |
 >
 > On the tested axis these populations did not overlap.
+>
+> **Scope caveat (fifth external review).** The 2×2 is a *candidate* window, not a
+> complete necessary-condition theory of memory utility. A known-lesson memory can
+> still add value through channels orthogonal to novelty — provenance, confidence
+> calibration, explicit evidence, temporal validity boundaries, retrieval grounding,
+> reduced uncertainty, or decision-time salience — so Novel(M)=0 does *not* force
+> ΔU=0. This study tests only the *instance-level information* channel: whether a
+> memory carrying decision-relevant information absent from the weights (and from
+> the task surface) changes decisions and outcomes. The private-information design
+> (§7.2 protocol, v2.1) makes that channel the only available one by construction,
+> so a null result under this design speaks to that channel — not to memory utility
+> in general, and not to the orthogonal channels listed above (future work).
 
 Status: **hypothesis, not finding.** Neither conjunct has been independently
 measured — Novel(M) is inferred indirectly and unfalsifiably from behavior (a model
@@ -897,3 +923,45 @@ closure report + errata).
    is added as the report's core observational framing; failure memory is
    positioned as one instance of negative/corrective memory; the next-round design
    is protocol v2.1 (four-factor factorial, §7.2 pointer updated).
+8. v0.5 amendment (fifth review; final change before freeze): MUW is downgraded
+   from a necessary-condition theory to a **candidate window on the information
+   channel** — the counterexample class (known lesson + memory adding provenance /
+   confidence / temporal validity / evidence) is recorded explicitly in §7.2, and
+   all "only where" claims are bounded to that channel. The paper-conversion
+   suggestions (compressed abstract, three-category related work with a small gap
+   matrix) are parked in Appendix C for the future paper version, not applied to
+   this internal record.
+
+## Appendix C — Paper-conversion checklist (parked; not applied to this record)
+
+Not part of the internal report. Items to apply **only** if/when this material is
+rewritten as a paper, after the protocol-v2.1 confirmatory run produces data.
+
+**C.1 Abstract skeleton** (compress the current diagnostic abstract to the
+scientific story):
+
+> We designed a paired validity manipulation to test whether failure memory can
+> be revised when the environment changes. The preregistered pilot failed its
+> behavioral viability gate: unconditional failure memory did not alter method
+> choice relative to no memory. Diagnostic runs showed that observed behavior
+> changes were not attributable to conditional information, while models could
+> recognize memory without acting on it. These observations motivate — not
+> establish — a memory utility window hypothesis, which we test in a new
+> private-information design.
+
+**C.2 Related-work regrouping**: replace the eight-row audit table (keep it in an
+appendix) with three prose categories — (1) failure/negative memory, (2)
+boundary-aware memory, (3) memory degradation / harmful memory — followed by a
+small gap matrix:
+
+| Work | Failure memory | Validity reversal | Wrong-abandonment cost |
+|---|---|---|---|
+| Existing failure-memory work | ✓ | — | — |
+| BASM [2608.22339] | boundary fields only | — | — |
+| This work | ✓ | ✓ (paired) | ✓ |
+
+Keep "among the audited works" phrasing throughout; no field-wide claims.
+
+**C.3 Theory presentation**: present MUW as a candidate window on the information
+channel (per the §7.2 scope caveat), with the orthogonal value channels
+(provenance/confidence/temporal validity/…) listed as explicitly out of scope.
