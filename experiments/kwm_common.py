@@ -17,6 +17,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -65,6 +66,11 @@ PASS_THRESHOLD = 0.6
 # ---------------------------------------------------------------------------
 # Ollama 生成客户端（native tools）
 # ---------------------------------------------------------------------------
+API_BASE = os.getenv("KWM_API_BASE", "").rstrip("/")       # 云端生成模型（可选）
+API_KEY = os.getenv("KWM_API_KEY", "")
+API_PROTOCOL = os.getenv("KWM_API_PROTOCOL", "openai")     # "openai" | "anthropic"
+
+
 def chat(
     messages: list[dict[str, Any]],
     tools: Optional[list[dict[str, Any]]] = None,
@@ -73,7 +79,60 @@ def chat(
     temperature: float = GEN_TEMPERATURE,
     timeout: float = CHAT_TIMEOUT,
 ) -> dict[str, Any]:
-    """调用 Ollama /api/chat。返回 response['message']（含 tool_calls）。"""
+    """生成模型调用。KWM_API_BASE 设置时走 OpenAI 兼容 /chat/completions，否则 Ollama。
+
+    返回统一为 Ollama 风格 {'message': {'content': ...}}。
+    """
+    if API_BASE and API_PROTOCOL == "anthropic":
+        system_text = "\n".join(m.get("content") or "" for m in messages if m.get("role") == "system")
+        convo = [m for m in messages if m.get("role") != "system"]
+        payload = {
+            "model": model,
+            "max_tokens": 4000,
+            "temperature": temperature,
+            "system": system_text,
+            "messages": convo,
+            "stream": False,
+        }
+        # opencode zen 端点：Cloudflare UA 检查 + x-opencode-session 路由 + x-api-key 凭证
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "claude-cli/2.0.0 (external, cli)",
+            "x-api-key": API_KEY,
+            "anthropic-version": "2023-06-01",
+            "x-opencode-session": str(uuid.uuid4()),
+        }
+        req = urllib.request.Request(
+            f"{API_BASE}/v1/messages",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Anthropic chat unavailable at {API_BASE}: {exc}") from exc
+        parts = [b.get("text") or "" for b in (data.get("content") or []) if b.get("type") == "text"]
+        return {"message": {"content": "".join(parts)}}
+    if API_BASE:
+        payload = {"model": model, "messages": messages, "temperature": temperature, "stream": False}
+        req = urllib.request.Request(
+            f"{API_BASE}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {API_KEY}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"API chat unavailable at {API_BASE}: {exc}") from exc
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+        return {"message": {"content": content}}
     payload: dict[str, Any] = {
         "model": model,
         "messages": messages,
